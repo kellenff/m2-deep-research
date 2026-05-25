@@ -1,4 +1,4 @@
-"""Supervisor Agent using Minimax M2.1 with interleaved thinking."""
+"""Supervisor Agent using MiniMax M2.7 with interleaved thinking."""
 
 import anthropic
 from typing import List, Dict, Any
@@ -13,17 +13,17 @@ console = Console()
 
 class SupervisorAgent:
     """
-    Main supervisor agent that coordinates research workflow using Minimax M2.
+    Main supervisor agent that coordinates research workflow using MiniMax M2.7.
     Implements interleaved thinking by preserving all content blocks in conversation history.
     """
 
     def __init__(self):
-        """Initialize Supervisor Agent with Minimax M2."""
+        """Initialize Supervisor Agent with MiniMax M2.7."""
         self.client = anthropic.Anthropic(
             api_key=Config.MINIMAX_API_KEY,
             base_url=Config.MINIMAX_BASE_URL,
         )
-        self.model = Config.MINIMAX_MODEL
+        self.model = Config.minimax_model()
 
         # Initialize sub-agents
         self.planning_agent = PlanningAgent()
@@ -224,7 +224,7 @@ Research Workflow:
 
     def research(self, query: str, max_iterations: int = 10) -> str:
         """
-        Conduct research on a given query using Minimax M2.1 with interleaved thinking.
+        Conduct research on a given query using MiniMax M2.7 with interleaved thinking.
 
         Args:
             query: Research question or topic
@@ -247,8 +247,8 @@ Research Workflow:
             iteration += 1
 
             try:
-                # Call Minimax M2.1 with streaming for long requests
-                console.print(f"[bold magenta][Iteration {iteration}][/bold magenta] [cyan]Calling Minimax M2.1...[/cyan]")
+                # Call MiniMax with streaming for long requests
+                console.print(f"[bold magenta][Iteration {iteration}][/bold magenta] [cyan]Calling {self.model}...[/cyan]")
 
                 with self.client.messages.stream(
                     model=self.model,

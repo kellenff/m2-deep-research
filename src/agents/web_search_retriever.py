@@ -1,7 +1,7 @@
 """Web Search Retriever Agent using Exa API."""
 
 import json
-import httpx
+import anthropic
 from typing import Dict, Any, List
 from src.tools.exa_tool import ExaTool
 from src.utils.config import Config
@@ -10,15 +10,17 @@ from src.utils.config import Config
 class WebSearchRetriever:
     """
     Agent that executes Exa searches for provided subqueries and synthesizes findings.
-    Uses OpenRouter with Gemini 2.5 Flash for synthesis.
+    Uses MiniMax M2.7 via the Anthropic-compatible endpoint for synthesis.
     """
 
     def __init__(self):
         """Initialize Web Search Retriever."""
         self.exa = ExaTool()
-        self.api_key = Config.OPENROUTER_API_KEY
-        self.base_url = Config.OPENROUTER_BASE_URL
-        self.model = Config.OPENROUTER_MODEL
+        self.client = anthropic.Anthropic(
+            api_key=Config.MINIMAX_API_KEY,
+            base_url=Config.MINIMAX_BASE_URL,
+        )
+        self.model = Config.minimax_model()
 
         self.system_prompt = """You are a web search retrieval specialist.
 
@@ -137,19 +139,7 @@ Be comprehensive but focused. Prioritize high-quality, authoritative sources."""
 
         context = "\n".join(context_parts)
 
-        # Create synthesis request
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": self.system_prompt},
-                {
-                    "role": "user",
-                    "content": f"""Research Query: {research_query}
+        user_message = f"""Research Query: {research_query}
 
 Search Results:
 {context}
@@ -163,23 +153,19 @@ Organize these findings into a comprehensive, detailed summary. Include:
 6. Notable experts, institutions, or authoritative voices
 7. Data, statistics, or concrete examples when available
 
-Be thorough and detailed - this will feed into a comprehensive research report.""",
-                },
-            ],
-            "temperature": 0.5,
-            "max_tokens": 6000,  # Increased for more comprehensive synthesis
-        }
+Be thorough and detailed - this will feed into a comprehensive research report."""
 
         try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=headers,
-                )
-                response.raise_for_status()
-                result = response.json()
-                return result["choices"][0]["message"]["content"]
+            response = self.client.messages.create(
+                model=self.model,
+                system=self.system_prompt,
+                messages=[{"role": "user", "content": user_message}],
+                max_tokens=6000,
+            )
+
+            # Extract text from the Anthropic-style content blocks
+            text_parts = [block.text for block in response.content if getattr(block, "type", None) == "text"]
+            return "\n".join(text_parts).strip() or "No synthesis content returned."
 
         except Exception as e:
             return f"Error synthesizing findings: {str(e)}"

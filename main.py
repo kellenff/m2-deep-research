@@ -3,9 +3,8 @@
 Deep Research Agent CLI
 
 A command-line interface for conducting deep research using:
-- Minimax M2.1 (supervisor with interleaved thinking)
+- MiniMax M2.7 (supervisor + subagents, with interleaved thinking)
 - Exa API (neural web search)
-- OpenRouter (subagent LLMs)
 """
 
 import sys
@@ -29,7 +28,7 @@ def print_banner():
     banner_text = Text()
     banner_text.append("DEEP RESEARCH AGENT", style="bold cyan")
     banner_text.append("\nPowered by ", style="white")
-    banner_text.append("Minimax M2.1", style="bold magenta")
+    banner_text.append(Config.minimax_model(), style="bold magenta")
     banner_text.append(" with ", style="white")
     banner_text.append("Interleaved Thinking", style="bold green")
 
@@ -87,7 +86,7 @@ def run_research(query: str, verbose: bool = False, save: bool = False):
     try:
         # Initialize supervisor
         if verbose:
-            console.print("\n[dim]Initializing Minimax M2.1 Supervisor Agent...[/dim]")
+            console.print(f"\n[dim]Initializing {Config.minimax_model()} Supervisor Agent...[/dim]")
 
         supervisor = SupervisorAgent()
 
@@ -182,7 +181,7 @@ def interactive_mode():
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Deep Research Agent - Conduct thorough research using Minimax M2.1 and Exa",
+        description="Deep Research Agent - Conduct thorough research using MiniMax M2.7 and Exa",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
