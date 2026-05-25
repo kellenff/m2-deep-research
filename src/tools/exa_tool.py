@@ -4,6 +4,15 @@ import httpx
 from typing import List, Dict, Any, Optional
 from src.utils.config import Config
 
+# Exa's /search endpoint validates `type` against this enum. Any other value
+# yields HTTP 400. Callers (e.g. the planning agent) sometimes pass content-type
+# values like "news" or "research paper" intending content filtering — those
+# belong in `category`, not `type`. We sanitize at this boundary.
+VALID_EXA_TYPES = frozenset({
+    "neural", "keyword", "auto", "hybrid", "fast",
+    "deep-reasoning", "deep-lite", "magic", "deep", "instant",
+})
+
 
 class ExaTool:
     """Wrapper for Exa API endpoints."""
@@ -40,7 +49,7 @@ class ExaTool:
             end_published_date: Filter results published before this date (ISO format)
             include_domains: List of domains to include
             exclude_domains: List of domains to exclude
-            type: Content type filter (auto, news, research paper, pdf, etc.)
+            type: Search algorithm — one of VALID_EXA_TYPES (auto, neural, keyword, hybrid, fast, deep-reasoning, deep-lite, magic, deep, instant). Out-of-set values silently fall back to "auto".
             use_autoprompt: Let Exa optimize the query
             text: Include full text content
             highlights: Include relevant highlights
@@ -49,6 +58,12 @@ class ExaTool:
             Dictionary containing search results
         """
         url = f"{self.base_url}/search"
+
+        # Sanitize `type`: Exa rejects unknown values with HTTP 400. Fall back
+        # to "auto" so the planning agent's content-type strings ("news",
+        # "research paper", "pdf") degrade gracefully instead of crashing.
+        if type not in VALID_EXA_TYPES:
+            type = "auto"
 
         payload = {
             "query": query,
