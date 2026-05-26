@@ -71,11 +71,22 @@ def main(
     argv: Optional[Sequence[str]] = None,
     *,
     generator: Optional[TurnGenerator] = None,
+    critic_generator: Optional[TurnGenerator] = None,
 ) -> int:
     args = parse_args(argv)
 
     if generator is None:
         generator = _build_production_generator()
+
+    # Resolve critic config.
+    if args.critique:
+        if critic_generator is None:
+            critic_generator = _build_production_generator()
+        from src.brainstorm.argdown_client import LightweightArgdownClient
+        argdown_client = LightweightArgdownClient()
+    else:
+        critic_generator = None
+        argdown_client = None
 
     try:
         transcript = run(
@@ -83,10 +94,35 @@ def main(
             claude_thoughts=args.claude_thoughts,
             max_rounds=args.max_rounds,
             generator=generator,
+            critic_generator=critic_generator,
+            argdown_client=argdown_client,
+            critic_temperature=args.critic_temperature,
         )
     except Exception as exc:  # API errors bubble up here.
         print(f"brainstorm: error during dialogue: {exc}", file=sys.stderr)
         return 1
+
+    # Compute critique_aggregate when in critique mode.
+    if args.critique:
+        critic_turns = [t for t in transcript["turns"] if t["speaker"] == "critic"]
+        transcript["critique_aggregate"] = {
+            "rounds_critiqued": len(critic_turns),
+            "rounds_with_critic_unavailable": sum(
+                1 for t in critic_turns if t.get("status") == "unavailable"
+            ),
+            "total_arguments_in": sum(
+                len(t.get("dung_extension", {}).get("in", []))
+                for t in critic_turns if t.get("status") == "ok"
+            ),
+            "total_arguments_out": sum(
+                len(t.get("dung_extension", {}).get("out", []))
+                for t in critic_turns if t.get("status") == "ok"
+            ),
+            "total_arguments_undec": sum(
+                len(t.get("dung_extension", {}).get("undec", []))
+                for t in critic_turns if t.get("status") == "ok"
+            ),
+        }
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

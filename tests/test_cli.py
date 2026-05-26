@@ -162,3 +162,129 @@ def test_parse_args_critic_temperature_rejects_out_of_range():
             "--critic-temperature", "-0.1",
             "--output", "/tmp/out.json",
         ])
+
+
+def test_main_with_critique_writes_critic_turns_to_transcript(tmp_path, monkeypatch):
+    """End-to-end: --critique invocation produces a transcript with critic turns."""
+    output = tmp_path / "transcript.json"
+
+    speaker_responses = iter(["prag_r1", "claude_r2", "prag_r2"])
+    critic_payload = json.dumps({
+        "turns_under_review": [],
+        "factual_assertions": [],
+        "assumptions": [],
+        "steelman": {"claude": "", "pragmatist": ""},
+        "anti_steelman": {"claude": "", "pragmatist": ""},
+        "argdown": "[A]: anything",
+    })
+
+    def speaker_gen(system, messages, temperature):
+        return next(speaker_responses)
+
+    def critic_gen(system, messages, temperature):
+        return critic_payload
+
+    exit_code = cli.main(
+        argv=[
+            "--prompt", "topic",
+            "--claude-thoughts", "seed",
+            "--max-rounds", "2",
+            "--critique",
+            "--output", str(output),
+        ],
+        generator=speaker_gen,
+        critic_generator=critic_gen,
+    )
+
+    assert exit_code == 0
+    data = json.loads(output.read_text())
+    critic_turns = [t for t in data["turns"] if t["speaker"] == "critic"]
+    assert len(critic_turns) == 2
+    assert all(t["status"] == "ok" for t in critic_turns)
+
+
+def test_main_with_critique_writes_critique_aggregate(tmp_path):
+    output = tmp_path / "transcript.json"
+    speaker_responses = iter(["prag_r1"])
+    critic_payload = json.dumps({
+        "turns_under_review": [],
+        "factual_assertions": [],
+        "assumptions": [],
+        "steelman": {"claude": "", "pragmatist": ""},
+        "anti_steelman": {"claude": "", "pragmatist": ""},
+        "argdown": "[A]: foo",
+    })
+
+    def speaker_gen(system, messages, temperature):
+        return next(speaker_responses)
+
+    def critic_gen(system, messages, temperature):
+        return critic_payload
+
+    cli.main(
+        argv=[
+            "--prompt", "topic",
+            "--claude-thoughts", "seed",
+            "--max-rounds", "1",
+            "--critique",
+            "--output", str(output),
+        ],
+        generator=speaker_gen,
+        critic_generator=critic_gen,
+    )
+
+    data = json.loads(output.read_text())
+    assert "critique_aggregate" in data
+    assert data["critique_aggregate"]["rounds_critiqued"] == 1
+    assert data["critique_aggregate"]["rounds_with_critic_unavailable"] == 0
+
+
+def test_main_without_critique_omits_critique_aggregate(tmp_path):
+    output = tmp_path / "transcript.json"
+
+    def speaker_gen(system, messages, temperature):
+        return "any response"
+
+    cli.main(
+        argv=[
+            "--prompt", "topic",
+            "--claude-thoughts", "seed",
+            "--max-rounds", "1",
+            "--output", str(output),
+        ],
+        generator=speaker_gen,
+    )
+
+    data = json.loads(output.read_text())
+    assert "critique_aggregate" not in data
+
+
+def test_main_sentinel_critic_turn_serializes(tmp_path):
+    output = tmp_path / "transcript.json"
+    speaker_responses = iter(["prag_r1"])
+
+    def speaker_gen(system, messages, temperature):
+        return next(speaker_responses)
+
+    def bad_critic_gen(system, messages, temperature):
+        return "not valid json {"
+
+    cli.main(
+        argv=[
+            "--prompt", "topic",
+            "--claude-thoughts", "seed",
+            "--max-rounds", "1",
+            "--critique",
+            "--output", str(output),
+        ],
+        generator=speaker_gen,
+        critic_generator=bad_critic_gen,
+    )
+
+    data = json.loads(output.read_text())
+    critic_turn = next(t for t in data["turns"] if t["speaker"] == "critic")
+    assert critic_turn["status"] == "unavailable"
+    assert critic_turn["error"] is not None
+    assert critic_turn["raw_text"] == "not valid json {"
+    assert "factual_assertions" not in critic_turn  # sentinel omits analytical fields
+    assert data["critique_aggregate"]["rounds_with_critic_unavailable"] == 1
