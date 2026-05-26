@@ -338,3 +338,30 @@ def test_run_critic_step_happy_path_returns_ok_status():
     assert critic_turn.dung_extension.in_ == ["A"]
     assert len(generator.calls) == 1
     assert generator.calls[0]["temperature"] == 0.3
+
+
+def test_run_critic_step_retries_once_on_json_failure_then_succeeds():
+    payload = _well_formed_critic_payload()
+    bad_text = "this is not json {"
+    good_text = json.dumps(payload)
+    generator = _StubGenerator([bad_text, good_text])
+    argdown = _StubArgdownClient()
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+
+    critic_turn = run_critic_step(
+        turns=turns,
+        current_round=1,
+        generator=generator,
+        argdown_client=argdown,
+        critic_temperature=0.3,
+    )
+
+    assert critic_turn.status == "ok"
+    assert len(generator.calls) == 2
+    retry_msgs = generator.calls[1]["messages"]
+    assert retry_msgs[0]["role"] == "user"
+    assert "Previous output failed validation" in retry_msgs[0]["content"]
+    assert "invalid JSON" in retry_msgs[0]["content"]
