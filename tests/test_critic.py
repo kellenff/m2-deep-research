@@ -54,3 +54,23 @@ def test_critic_turn_construction_ok_status():
     )
     assert ct.status == "ok"
     assert ct.speaker == "critic"
+
+
+from src.brainstorm.critic import CRITIC_SYSTEM_PROMPT
+
+
+def test_critic_system_prompt_includes_required_phrases():
+    """The critic system prompt is the verbatim contract with the LLM.
+
+    Per the spec, certain phrases are load-bearing:
+    - It defines the JSON schema the LLM must produce
+    - It forbids prose/fences outside the JSON
+    - It defines anti_steelman as the weakest version of the speaker's own argument
+    """
+    p = CRITIC_SYSTEM_PROMPT
+    assert "JSON object" in p
+    assert "anti_steelman" in p
+    assert "WEAKEST" in p
+    assert "Output ONLY the JSON object" in p
+    assert "factual_assertions" in p
+    assert "argdown" in p
