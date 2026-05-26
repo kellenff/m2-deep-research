@@ -250,3 +250,33 @@ def test_render_addendum_for_pragmatist_speaker():
     assert "Redis blocklist scales fine here" not in addendum
     assert "JWT only works if mobile clients" not in addendum
     assert "cross-platform Keychain is simple" not in addendum
+
+
+def test_render_addendum_omits_assumptions_section_when_speaker_has_none():
+    ct = _ok_critic_turn()
+    # Remove claude's assumption; keep pragmatist's.
+    ct.assumptions = [a for a in ct.assumptions if a.speaker != "claude"]
+    addendum = render_addendum(ct, target_speaker="claude")
+
+    assert "Undefended assumptions you relied on" not in addendum
+    # Other sections still present.
+    assert "Your weakest claim" in addendum
+    assert "The opposing steelman to engage with" in addendum
+
+
+def test_render_addendum_omits_assumptions_when_all_speaker_assumptions_are_argued_for():
+    ct = _ok_critic_turn()
+    # Make claude's assumption argued_for=True.
+    for a in ct.assumptions:
+        if a.speaker == "claude":
+            a.argued_for = True
+    addendum = render_addendum(ct, target_speaker="claude")
+    assert "Undefended assumptions you relied on" not in addendum
+
+
+def test_render_addendum_returns_empty_string_for_unavailable_status():
+    ct = _ok_critic_turn()
+    ct.status = "unavailable"
+    ct.error = "argdown.parse failed: ..."
+    addendum = render_addendum(ct, target_speaker="claude")
+    assert addendum == ""
