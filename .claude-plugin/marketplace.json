@@ -2,18 +2,16 @@
   "name": "m2-deep-research",
   "description": "Plugins built on top of the m2-deep-research package (MiniMax-M2.7-highspeed)",
   "owner": {
-    "name": "Kellen Frodelius-Fujimoto",
-    "email": "kellen@kellenfujimoto.com"
+    "name": "Kellen Frodelius-Fujimoto"
   },
   "plugins": [
     {
       "name": "m2-brainstorm",
       "description": "Multi-turn brainstorming dialogue powered by MiniMax-M2.7-highspeed",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./.claude/plugins/m2-brainstorm",
       "author": {
-        "name": "Kellen Frodelius-Fujimoto",
-        "email": "kellen@kellenfujimoto.com"
+        "name": "Kellen Frodelius-Fujimoto"
       }
     }
   ]

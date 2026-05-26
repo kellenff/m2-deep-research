@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(snowball:brainstorming)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import sys,json; [print\\(f['type'],f['path']\\) for f in json.load\\(sys.stdin\\)]\")",
+      "Skill(snowball:writing-plans)",
+      "Skill(snowball:subagent-driven-development)",
+      "Skill(snowball:using-git-worktrees)",
+      "Bash(git commit *)",
+      "mcp__plugin_serena_serena__create_text_file",
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__initial_instructions",
+      "mcp__plugin_serena_serena__execute_shell_command",
+      "mcp__plugin_serena_serena__list_dir",
+      "mcp__plugin_serena_serena__read_file",
+      "Bash(uv run pytest *)",
+      "Bash(git add *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(git -C /Users/kellen/Projects/m2-deep-research/.claude/worktrees/m2-brainstorm-plugin add src/brainstorm/cli.py tests/test_cli.py)",
+      "Bash(git -C /Users/kellen/Projects/m2-deep-research/.claude/worktrees/m2-brainstorm-plugin commit -m ' *)",
+      "Bash(ln -sf /Users/kellen/Projects/m2-deep-research/.env .env)",
+      "Bash(python3 /Users/kellen/Projects/m2-deep-research/.claude/worktrees/m2-brainstorm-plugin/brainstorm.py --help)",
+      "Skill(snowball:finishing-a-development-branch)",
+      "Bash(git -C /Users/kellen/Projects/m2-deep-research status -sb)",
+      "Bash(git -C /Users/kellen/Projects/m2-deep-research log --oneline -3)",
+      "Bash(git -C /Users/kellen/Projects/m2-deep-research merge --ff-only worktree-m2-brainstorm-plugin)",
+      "Skill(plugin-dev:plugin-structure)"
+    ]
+  }
+}

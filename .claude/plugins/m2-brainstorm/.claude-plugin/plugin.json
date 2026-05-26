@@ -1,6 +1,8 @@
 {
   "name": "m2-brainstorm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Multi-turn brainstorming dialogue powered by MiniMax-M2.7-highspeed",
-  "author": "kellenff"
+  "author": {
+    "name": "Kellen Frodelius-Fujimoto"
+  }
 }
