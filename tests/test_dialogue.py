@@ -131,3 +131,90 @@ def test_round_2_produces_claude_synth_turn():
     # Round-2 claude turn must come from the generator (not be the seed).
     round_2_claude = next(t for t in result["turns"] if t["round"] == 2 and t["speaker"] == "claude")
     assert round_2_claude["text"] == "claude_synth_r2"
+
+
+def test_claude_synth_uses_temperature_0_8():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append({"system": system, "temperature": temperature})
+        # Return distinct values so the loop can progress.
+        return f"call-{len(captured)}"
+
+    run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=2,
+        generator=capturing_gen,
+    )
+
+    # Calls in order: pragmatist_r1, claude_synth_r2, pragmatist_r2.
+    assert captured[0]["temperature"] == 0.5
+    assert captured[1]["temperature"] == 0.8
+    assert captured[2]["temperature"] == 0.5
+
+
+def test_claude_synth_system_excludes_pragmatist_framing_and_includes_seed():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append({"system": system, "temperature": temperature})
+        return f"call-{len(captured)}"
+
+    run(
+        prompt="topic",
+        claude_thoughts="SEED_MARKER",
+        max_rounds=2,
+        generator=capturing_gen,
+    )
+
+    claude_synth_system = captured[1]["system"]
+    assert "role-playing Claude" in claude_synth_system
+    assert "SEED_MARKER" in claude_synth_system
+    # Make sure we didn't accidentally give claude-synth the pragmatist role identity.
+    assert "You are MiniMax, a pragmatist" not in claude_synth_system
+
+
+def test_claude_synth_messages_exclude_seed_and_start_with_user():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append(messages)
+        return f"call-{len(captured)}"
+
+    run(
+        prompt="topic",
+        claude_thoughts="SEED",
+        max_rounds=2,
+        generator=capturing_gen,
+    )
+
+    # captured[1] is the claude-synth call in round 2.
+    claude_synth_messages = captured[1]
+    assert claude_synth_messages[0]["role"] == "user", (
+        "claude-synth's first message must be user-role to satisfy Anthropic API"
+    )
+    # Seed must NOT appear in claude-synth's messages.
+    assert all("SEED" not in m["content"] for m in claude_synth_messages)
+
+
+def test_pragmatist_messages_alternate_user_assistant_across_rounds():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append(messages)
+        return f"text-{len(captured)}"
+
+    run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=3,
+        generator=capturing_gen,
+    )
+
+    # Pragmatist calls are indices 0, 2, 4.
+    pragmatist_r3_messages = captured[4]
+    roles = [m["role"] for m in pragmatist_r3_messages]
+    # Expected: user(seed), assistant(prag_r1), user(claude_synth_r2),
+    #           assistant(prag_r2), user(claude_synth_r3)
+    assert roles == ["user", "assistant", "user", "assistant", "user"]
