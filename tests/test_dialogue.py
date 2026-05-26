@@ -51,3 +51,57 @@ def test_round_1_claude_turn_is_verbatim_seed_no_api_call():
 
     # Only the pragmatist round-1 turn should hit the generator.
     assert len(calls) == 1, f"expected 1 API call for max_rounds=1, got {len(calls)}"
+
+
+def test_pragmatist_call_uses_temperature_0_5():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append({"system": system, "messages": messages, "temperature": temperature})
+        return "pragmatist response"
+
+    run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=1,
+        generator=capturing_gen,
+    )
+
+    pragmatist_call = captured[0]
+    assert pragmatist_call["temperature"] == 0.5
+
+
+def test_pragmatist_system_includes_prompt_and_pragmatist_framing():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append({"system": system, "messages": messages, "temperature": temperature})
+        return "response"
+
+    run(
+        prompt="UNIQUE_TOPIC_MARKER",
+        claude_thoughts="seed",
+        max_rounds=1,
+        generator=capturing_gen,
+    )
+
+    system = captured[0]["system"]
+    assert "pragmatist" in system.lower()
+    assert "UNIQUE_TOPIC_MARKER" in system
+
+
+def test_round_1_pragmatist_messages_have_seed_as_user():
+    captured = []
+
+    def capturing_gen(system, messages, temperature):
+        captured.append({"system": system, "messages": messages, "temperature": temperature})
+        return "response"
+
+    run(
+        prompt="topic",
+        claude_thoughts="EXACT SEED",
+        max_rounds=1,
+        generator=capturing_gen,
+    )
+
+    assert captured[0]["messages"] == [{"role": "user", "content": "EXACT SEED"}]
