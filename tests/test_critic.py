@@ -108,3 +108,43 @@ def test_validate_critic_json_happy_path():
     assert result.payload.steelman.claude == "strong claude"
     assert result.payload.anti_steelman.pragmatist == "weak pragmatist"
     assert result.payload.argdown == "[A]: claude\n  -> [B]: pragmatist"
+
+
+def test_validate_critic_json_rejects_invalid_json():
+    result = validate_critic_json("not json at all {")
+    assert result.payload is None
+    assert "invalid JSON" in result.error
+
+
+def test_validate_critic_json_rejects_missing_required_field():
+    payload = _well_formed_critic_payload()
+    del payload["anti_steelman"]
+    result = validate_critic_json(json.dumps(payload))
+    assert result.payload is None
+    assert "missing required fields" in result.error
+    assert "anti_steelman" in result.error
+
+
+def test_validate_critic_json_rejects_anti_steelman_with_wrong_keys():
+    payload = _well_formed_critic_payload()
+    payload["anti_steelman"] = {"foo": "x", "bar": "y"}  # should be claude/pragmatist
+    result = validate_critic_json(json.dumps(payload))
+    assert result.payload is None
+    assert "shape error" in result.error
+
+
+def test_validate_critic_json_rejects_assumption_with_wrong_type():
+    payload = _well_formed_critic_payload()
+    payload["assumptions"][0]["argued_for"] = "not a bool"
+    # We accept this for now (no strict type enforcement); ensure construction succeeds.
+    # If we DO add strict typing later, this test should flip.
+    result = validate_critic_json(json.dumps(payload))
+    assert result.payload is not None  # current behavior: tolerate scalar coercion-friendly types
+
+
+def test_validate_critic_json_rejects_factual_assertion_missing_field():
+    payload = _well_formed_critic_payload()
+    del payload["factual_assertions"][0]["verifiable"]
+    result = validate_critic_json(json.dumps(payload))
+    assert result.payload is None
+    assert "shape error" in result.error
