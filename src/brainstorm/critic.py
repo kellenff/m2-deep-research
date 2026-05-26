@@ -4,6 +4,7 @@ Owns the boundary that converts the critic LLM's text output into typed
 domain values, plus the addendum rendering and per-round orchestration.
 """
 
+import json
 from dataclasses import dataclass
 from typing import Literal
 
@@ -98,3 +99,55 @@ class CriticTurn:
     status: Literal["ok", "unavailable"]
     error: str | None
     raw_text: str | None
+
+
+@dataclass
+class CriticPayload:
+    """The fields the LLM emits. Engine-set fields (round, speaker, status,
+    error, raw_text, dung_extension) are added later in run_critic_step.
+    """
+    turns_under_review: list[str]
+    factual_assertions: list[FactualAssertion]
+    assumptions: list[Assumption]
+    steelman: SteelmanPair
+    anti_steelman: SteelmanPair
+    argdown: str
+
+
+@dataclass
+class CriticValidationResult:
+    payload: CriticPayload | None
+    error: str | None
+
+
+def validate_critic_json(text: str) -> CriticValidationResult:
+    """Strict JSON validation. No fence-stripping; the system prompt forbids
+    fences and the retry prompt tells the model so verbatim.
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        return CriticValidationResult(payload=None, error=f"invalid JSON: {e}")
+
+    required = {"turns_under_review", "factual_assertions", "assumptions",
+                "steelman", "anti_steelman", "argdown"}
+    missing = required - data.keys()
+    if missing:
+        return CriticValidationResult(payload=None,
+                                       error=f"missing required fields: {sorted(missing)}")
+
+    try:
+        payload = CriticPayload(
+            turns_under_review=list(data["turns_under_review"]),
+            factual_assertions=[
+                FactualAssertion(**fa) for fa in data["factual_assertions"]
+            ],
+            assumptions=[Assumption(**a) for a in data["assumptions"]],
+            steelman=SteelmanPair(**data["steelman"]),
+            anti_steelman=SteelmanPair(**data["anti_steelman"]),
+            argdown=str(data["argdown"]),
+        )
+    except (TypeError, KeyError) as e:
+        return CriticValidationResult(payload=None, error=f"shape error: {e}")
+
+    return CriticValidationResult(payload=payload, error=None)

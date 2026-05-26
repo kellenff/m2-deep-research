@@ -74,3 +74,37 @@ def test_critic_system_prompt_includes_required_phrases():
     assert "Output ONLY the JSON object" in p
     assert "factual_assertions" in p
     assert "argdown" in p
+
+
+import json
+from src.brainstorm.critic import validate_critic_json, CriticPayload
+
+
+def _well_formed_critic_payload() -> dict:
+    return {
+        "turns_under_review": ["claude_r1", "pragmatist_r1"],
+        "factual_assertions": [
+            {"speaker": "claude", "claim": "Postgres has transactions.",
+             "verifiable": True, "source": None}
+        ],
+        "assumptions": [
+            {"speaker": "pragmatist", "premise": "Redis is deployed.",
+             "argued_for": False}
+        ],
+        "steelman": {"claude": "strong claude", "pragmatist": "strong pragmatist"},
+        "anti_steelman": {"claude": "weak claude", "pragmatist": "weak pragmatist"},
+        "argdown": "[A]: claude\n  -> [B]: pragmatist",
+    }
+
+
+def test_validate_critic_json_happy_path():
+    text = json.dumps(_well_formed_critic_payload())
+    result = validate_critic_json(text)
+    assert result.error is None
+    assert isinstance(result.payload, CriticPayload)
+    assert result.payload.turns_under_review == ["claude_r1", "pragmatist_r1"]
+    assert result.payload.factual_assertions[0].claim == "Postgres has transactions."
+    assert result.payload.assumptions[0].argued_for is False
+    assert result.payload.steelman.claude == "strong claude"
+    assert result.payload.anti_steelman.pragmatist == "weak pragmatist"
+    assert result.payload.argdown == "[A]: claude\n  -> [B]: pragmatist"
