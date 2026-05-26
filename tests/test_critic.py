@@ -1,12 +1,23 @@
 """Tests for the critic module."""
 
+import json
+
+from src.brainstorm.argdown_client import (
+    ArgdownParseResult,
+    DungExtensionResult,
+)
 from src.brainstorm.critic import (
-    FactualAssertion,
     Assumption,
-    SteelmanPair,
-    DungExtension,
+    CRITIC_SYSTEM_PROMPT,
+    CriticPayload,
     CriticTurn,
+    DungExtension,
+    FactualAssertion,
+    SteelmanPair,
+    build_critic_messages,
     render_addendum,
+    run_critic_step,
+    validate_critic_json,
 )
 
 
@@ -57,9 +68,6 @@ def test_critic_turn_construction_ok_status():
     assert ct.speaker == "critic"
 
 
-from src.brainstorm.critic import CRITIC_SYSTEM_PROMPT
-
-
 def test_critic_system_prompt_includes_required_phrases():
     """The critic system prompt is the verbatim contract with the LLM.
 
@@ -75,10 +83,6 @@ def test_critic_system_prompt_includes_required_phrases():
     assert "Output ONLY the JSON object" in p
     assert "factual_assertions" in p
     assert "argdown" in p
-
-
-import json
-from src.brainstorm.critic import validate_critic_json, CriticPayload
 
 
 def _well_formed_critic_payload() -> dict:
@@ -149,9 +153,6 @@ def test_validate_critic_json_rejects_factual_assertion_missing_field():
     result = validate_critic_json(json.dumps(payload))
     assert result.payload is None
     assert "shape error" in result.error
-
-
-from src.brainstorm.critic import build_critic_messages
 
 
 def test_build_critic_messages_first_attempt_includes_current_round_only():
@@ -280,10 +281,6 @@ def test_render_addendum_returns_empty_string_for_unavailable_status():
     ct.error = "argdown.parse failed: ..."
     addendum = render_addendum(ct, target_speaker="claude")
     assert addendum == ""
-
-
-from src.brainstorm.critic import run_critic_step
-from src.brainstorm.argdown_client import ArgdownParseResult, DungExtensionResult
 
 
 class _StubGenerator:

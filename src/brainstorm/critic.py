@@ -8,6 +8,8 @@ import json
 from dataclasses import dataclass
 from typing import Callable, Literal
 
+from src.brainstorm.argdown_client import ArgdownClient
+
 
 CRITIC_SYSTEM_PROMPT = """You are the critic. You moderate a brainstorming dialogue between two
 personas: claude (a senior dev) and pragmatist (skeptical of hype). After
@@ -239,7 +241,7 @@ def run_critic_step(
     turns: list[dict],
     current_round: int,
     generator: Callable[..., str],
-    argdown_client,  # ArgdownClient Protocol
+    argdown_client: ArgdownClient,
     critic_temperature: float,
 ) -> CriticTurn:
     """Run one critic call. At most one retry on validation failure.
