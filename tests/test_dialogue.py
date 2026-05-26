@@ -105,3 +105,29 @@ def test_round_1_pragmatist_messages_have_seed_as_user():
     )
 
     assert captured[0]["messages"] == [{"role": "user", "content": "EXACT SEED"}]
+
+
+def test_round_2_produces_claude_synth_turn():
+    responses = iter(["pragmatist_r1", "claude_synth_r2", "pragmatist_r2"])
+
+    def scripted_gen(system, messages, temperature):
+        return next(responses)
+
+    result = run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=2,
+        generator=scripted_gen,
+    )
+
+    # Expect 4 turns total for 2 rounds: claude_r1, pragmatist_r1, claude_synth_r2, pragmatist_r2.
+    speakers = [(t["round"], t["speaker"]) for t in result["turns"]]
+    assert speakers == [
+        (1, "claude"),
+        (1, "pragmatist"),
+        (2, "claude"),
+        (2, "pragmatist"),
+    ]
+    # Round-2 claude turn must come from the generator (not be the seed).
+    round_2_claude = next(t for t in result["turns"] if t["round"] == 2 and t["speaker"] == "claude")
+    assert round_2_claude["text"] == "claude_synth_r2"
