@@ -18,13 +18,28 @@ def run(
     max_rounds: int,
     *,
     generator: TurnGenerator,
+    critic_generator: TurnGenerator | None = None,
+    argdown_client=None,  # ArgdownClient Protocol; typed loose to avoid circular import
+    critic_temperature: float = 0.3,
 ) -> dict:
     """Run a multi-turn brainstorming dialogue.
 
     Returns a transcript dict matching the m2-brainstorm output schema.
+    When critic_generator and argdown_client are both provided, runs a
+    third critic voice per round (3N total turns, 3N-1 API calls).
     """
     if not 1 <= max_rounds <= 5:
         raise ValueError("max_rounds must be between 1 and 5")
+
+    # Critic config must be all-or-nothing.
+    if critic_generator is not None and argdown_client is None:
+        raise ValueError(
+            "critic_generator requires argdown_client (or pass neither)"
+        )
+    if argdown_client is not None and critic_generator is None:
+        raise ValueError(
+            "argdown_client requires critic_generator (or pass neither)"
+        )
 
     pragmatist_system = (
         "You are MiniMax, a pragmatist focused on what devs actually need, "

@@ -218,3 +218,45 @@ def test_pragmatist_messages_alternate_user_assistant_across_rounds():
     # Expected: user(seed), assistant(prag_r1), user(claude_synth_r2),
     #           assistant(prag_r2), user(claude_synth_r3)
     assert roles == ["user", "assistant", "user", "assistant", "user"]
+
+
+def test_run_raises_value_error_when_critic_generator_without_argdown_client():
+    with pytest.raises(ValueError, match="critic_generator requires argdown_client"):
+        run(
+            prompt="t",
+            claude_thoughts="seed",
+            max_rounds=1,
+            generator=_stub_generator,
+            critic_generator=_stub_generator,
+            argdown_client=None,
+        )
+
+
+def test_run_raises_value_error_when_argdown_client_without_critic_generator():
+    from src.brainstorm.argdown_client import LightweightArgdownClient
+    with pytest.raises(ValueError, match="argdown_client requires critic_generator"):
+        run(
+            prompt="t",
+            claude_thoughts="seed",
+            max_rounds=1,
+            generator=_stub_generator,
+            critic_generator=None,
+            argdown_client=LightweightArgdownClient(),
+        )
+
+
+def test_run_without_critic_generator_produces_byte_identical_v01x_shape():
+    """Sanity check: the v0.1.x transcript has no critic fields when critic_generator=None."""
+    result = run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=1,
+        generator=_stub_generator,
+        critic_generator=None,
+        argdown_client=None,
+    )
+    # No critic turns.
+    speakers = [t["speaker"] for t in result["turns"]]
+    assert "critic" not in speakers
+    # No critique_aggregate top-level field.
+    assert "critique_aggregate" not in result
