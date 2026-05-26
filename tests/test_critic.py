@@ -173,3 +173,23 @@ def test_build_critic_messages_first_attempt_includes_current_round_only():
     assert "seed text" not in content
     assert "pragmatist r1" not in content
     assert "Produce your critique JSON" in content
+
+
+def test_build_critic_messages_retry_includes_error_feedback_as_first_user_msg():
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+    messages = build_critic_messages(
+        turns,
+        current_round=1,
+        last_error="missing required fields: ['anti_steelman']",
+    )
+    assert len(messages) == 2
+    assert messages[0]["role"] == "user"
+    assert "Previous output failed validation" in messages[0]["content"]
+    assert "missing required fields: ['anti_steelman']" in messages[0]["content"]
+    assert "No prose, no fences" in messages[0]["content"]
+    # Original round summary follows.
+    assert messages[1]["role"] == "user"
+    assert "prag r1" in messages[1]["content"]
