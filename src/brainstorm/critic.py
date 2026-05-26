@@ -151,3 +151,40 @@ def validate_critic_json(text: str) -> CriticValidationResult:
         return CriticValidationResult(payload=None, error=f"shape error: {e}")
 
     return CriticValidationResult(payload=payload, error=None)
+
+
+def build_critic_messages(
+    turns: list[dict],
+    *,
+    current_round: int,
+    last_error: str | None = None,
+) -> list[dict]:
+    """Construct the messages list for a critic call.
+
+    Stateless: only the current round's two speaker turns (claude + pragmatist)
+    are included. Prior rounds' turns and prior critic turns are excluded.
+    This keeps critic input bounded and prevents the critic from being
+    influenced by its own prior judgments.
+    """
+    round_turns = [
+        t for t in turns
+        if t["round"] == current_round and t["speaker"] in ("claude", "pragmatist")
+    ]
+    summary = "\n\n".join(
+        f"{t['speaker']} (round {t['round']}): {t['text']}"
+        for t in round_turns
+    )
+    user_text = f"{summary}\n\nProduce your critique JSON for the turns above."
+    messages = [{"role": "user", "content": user_text}]
+
+    if last_error:
+        messages.insert(0, {
+            "role": "user",
+            "content": (
+                f"Previous output failed validation: {last_error}. "
+                f"Re-emit the JSON object matching the schema exactly. "
+                f"No prose, no fences."
+            ),
+        })
+
+    return messages

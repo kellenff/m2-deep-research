@@ -148,3 +148,28 @@ def test_validate_critic_json_rejects_factual_assertion_missing_field():
     result = validate_critic_json(json.dumps(payload))
     assert result.payload is None
     assert "shape error" in result.error
+
+
+from src.brainstorm.critic import build_critic_messages
+
+
+def test_build_critic_messages_first_attempt_includes_current_round_only():
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed text"},
+        {"round": 1, "speaker": "pragmatist", "text": "pragmatist r1"},
+        {"round": 1, "speaker": "critic", "text": "(omitted, irrelevant)"},
+        {"round": 2, "speaker": "claude", "text": "claude r2"},
+        {"round": 2, "speaker": "pragmatist", "text": "pragmatist r2"},
+    ]
+    # Build messages for the critic call at the END of round 2.
+    messages = build_critic_messages(turns, current_round=2, last_error=None)
+
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
+    content = messages[0]["content"]
+    # Only round-2 speaker turns appear; prior rounds and critic turns are excluded.
+    assert "claude r2" in content
+    assert "pragmatist r2" in content
+    assert "seed text" not in content
+    assert "pragmatist r1" not in content
+    assert "Produce your critique JSON" in content
