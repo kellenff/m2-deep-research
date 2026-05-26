@@ -76,10 +76,35 @@ def main(
 
 
 def _build_production_generator() -> TurnGenerator:
-    """Build the live MiniMax-backed TurnGenerator. See Task 8."""
-    raise NotImplementedError(
-        "Production generator not wired yet; pass generator= explicitly."
+    """Build the live MiniMax-backed TurnGenerator.
+
+    Uses the anthropic SDK pointed at the MiniMax-compatible /anthropic endpoint
+    (see src.utils.config.Config).
+    """
+    import anthropic
+
+    from src.utils.config import Config
+
+    client = anthropic.Anthropic(
+        api_key=Config.MINIMAX_API_KEY,
+        base_url=Config.MINIMAX_BASE_URL,
     )
+    model = Config.MINIMAX_MODEL
+
+    def generate(system: str, messages: list[dict], temperature: float) -> str:
+        response = client.messages.create(
+            model=model,
+            max_tokens=1500,
+            temperature=temperature,
+            system=system,
+            messages=messages,
+        )
+        return "".join(
+            block.text for block in response.content
+            if hasattr(block, "type") and block.type == "text"
+        )
+
+    return generate
 
 
 if __name__ == "__main__":
