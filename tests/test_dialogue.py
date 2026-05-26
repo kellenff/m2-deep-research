@@ -344,3 +344,82 @@ def test_run_round_1_critic_reviews_seed_and_pragmatist():
 
     critic_turn = next(t for t in result["turns"] if t["speaker"] == "critic")
     assert critic_turn["turns_under_review"] == ["claude_r1", "pragmatist_r1"]
+
+
+def test_run_round_2_speakers_see_round_1_critic_addendum():
+    captured_systems = []
+
+    def speaker_gen(system, messages, temperature):
+        captured_systems.append(system)
+        return f"response_t{temperature}"
+
+    payload = _critic_payload()
+    # Add concrete anti_steelman/steelman/assumption content so addendum is non-trivial.
+    payload["anti_steelman"] = {"claude": "WEAK_CLAUDE_HERE", "pragmatist": "WEAK_PRAG_HERE"}
+    payload["steelman"] = {"claude": "STRONG_CLAUDE", "pragmatist": "STRONG_PRAG"}
+    payload["assumptions"] = [
+        {"speaker": "claude", "premise": "CLAUDE_PREMISE", "argued_for": False},
+        {"speaker": "pragmatist", "premise": "PRAG_PREMISE", "argued_for": False},
+    ]
+
+    def critic_gen(system, messages, temperature):
+        return json.dumps(payload)
+
+    run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=2,
+        generator=speaker_gen,
+        critic_generator=critic_gen,
+        argdown_client=_StubArgdownClient(),
+        critic_temperature=0.3,
+    )
+
+    # captured_systems order: round-1 pragmatist, round-2 claude-synth, round-2 pragmatist.
+    # The round-2 systems should contain addendum content from the round-1 critic.
+    r1_prag_sys = captured_systems[0]
+    r2_claude_sys = captured_systems[1]
+    r2_prag_sys = captured_systems[2]
+
+    # Round-1 pragmatist sees no addendum (no prior critic turn).
+    assert "Critic feedback from round" not in r1_prag_sys
+
+    # Round-2 claude-synth sees its own anti_steelman.
+    assert "WEAK_CLAUDE_HERE" in r2_claude_sys
+    assert "CLAUDE_PREMISE" in r2_claude_sys
+    assert "STRONG_PRAG" in r2_claude_sys   # opposing steelman
+    assert "WEAK_PRAG_HERE" not in r2_claude_sys  # opposing anti_steelman not shown
+
+    # Round-2 pragmatist sees its own anti_steelman.
+    assert "WEAK_PRAG_HERE" in r2_prag_sys
+    assert "PRAG_PREMISE" in r2_prag_sys
+    assert "STRONG_CLAUDE" in r2_prag_sys  # opposing steelman
+    assert "WEAK_CLAUDE_HERE" not in r2_prag_sys
+
+
+def test_run_sentinel_critic_turn_does_not_augment_next_round():
+    captured_systems = []
+
+    def speaker_gen(system, messages, temperature):
+        captured_systems.append(system)
+        return f"response_t{temperature}"
+
+    # Critic generator always emits garbage; both attempts fail; sentinel.
+    def bad_critic_gen(system, messages, temperature):
+        return "bad json {"
+
+    run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=2,
+        generator=speaker_gen,
+        critic_generator=bad_critic_gen,
+        argdown_client=_StubArgdownClient(),
+        critic_temperature=0.3,
+    )
+
+    # Round-2 speakers should see no addendum (round-1 critic was unavailable).
+    r2_claude_sys = captured_systems[1]
+    r2_prag_sys = captured_systems[2]
+    assert "Critic feedback from round" not in r2_claude_sys
+    assert "Critic feedback from round" not in r2_prag_sys
