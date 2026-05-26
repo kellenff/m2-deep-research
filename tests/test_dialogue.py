@@ -260,3 +260,87 @@ def test_run_without_critic_generator_produces_byte_identical_v01x_shape():
     assert "critic" not in speakers
     # No critique_aggregate top-level field.
     assert "critique_aggregate" not in result
+
+
+import json
+from src.brainstorm.critic import (
+    FactualAssertion, Assumption, SteelmanPair,
+)
+from src.brainstorm.argdown_client import (
+    ArgdownParseResult, DungExtensionResult,
+)
+
+
+def _critic_payload() -> dict:
+    return {
+        "turns_under_review": ["claude_r1", "pragmatist_r1"],
+        "factual_assertions": [],
+        "assumptions": [],
+        "steelman": {"claude": "S-claude", "pragmatist": "S-prag"},
+        "anti_steelman": {"claude": "AS-claude", "pragmatist": "AS-prag"},
+        "argdown": "[A]: arg one",
+    }
+
+
+class _StubArgdownClient:
+    def parse(self, source):
+        return ArgdownParseResult(ok=True, error=None)
+
+    def dung_extensions(self, source):
+        return DungExtensionResult(in_=[], out=[], undec=[])
+
+
+def test_run_critic_mode_produces_3n_turns_in_correct_order():
+    """3 rounds * 3 turns = 9 turns, ordered claude/pragmatist/critic per round."""
+    speaker_responses = iter(["prag_r1", "claude_r2", "prag_r2", "claude_r3", "prag_r3"])
+    critic_responses = iter([
+        json.dumps(_critic_payload()),
+        json.dumps(_critic_payload()),
+        json.dumps(_critic_payload()),
+    ])
+
+    def speaker_gen(system, messages, temperature):
+        return next(speaker_responses)
+
+    def critic_gen(system, messages, temperature):
+        return next(critic_responses)
+
+    result = run(
+        prompt="topic",
+        claude_thoughts="seed",
+        max_rounds=3,
+        generator=speaker_gen,
+        critic_generator=critic_gen,
+        argdown_client=_StubArgdownClient(),
+        critic_temperature=0.3,
+    )
+
+    speakers = [(t["round"], t["speaker"]) for t in result["turns"]]
+    assert speakers == [
+        (1, "claude"), (1, "pragmatist"), (1, "critic"),
+        (2, "claude"), (2, "pragmatist"), (2, "critic"),
+        (3, "claude"), (3, "pragmatist"), (3, "critic"),
+    ]
+    critic_turns = [t for t in result["turns"] if t["speaker"] == "critic"]
+    assert all(t["status"] == "ok" for t in critic_turns)
+
+
+def test_run_round_1_critic_reviews_seed_and_pragmatist():
+    def speaker_gen(system, messages, temperature):
+        return "pragmatist response"
+
+    def critic_gen(system, messages, temperature):
+        return json.dumps(_critic_payload())
+
+    result = run(
+        prompt="topic",
+        claude_thoughts="THE_SEED_TEXT",
+        max_rounds=1,
+        generator=speaker_gen,
+        critic_generator=critic_gen,
+        argdown_client=_StubArgdownClient(),
+        critic_temperature=0.3,
+    )
+
+    critic_turn = next(t for t in result["turns"] if t["speaker"] == "critic")
+    assert critic_turn["turns_under_review"] == ["claude_r1", "pragmatist_r1"]
