@@ -18,7 +18,7 @@ class ArgdownParseResult:
 
 @dataclass
 class DungExtensionResult:
-    in_: list[str]
+    in_: list[str]  # serializes as "in" (Python keyword conflict)
     out: list[str]
     undec: list[str]
 
@@ -28,7 +28,7 @@ class ArgdownClient(Protocol):
     def dung_extensions(self, source: str) -> DungExtensionResult: ...
 
 
-_LABELED_ARGUMENT_RE = re.compile(r"\[[^\]]+\]\s*:")
+_LABELED_ARGUMENT_RE = re.compile(r"^\[[^\]]+\]\s*:", re.MULTILINE)
 
 
 class LightweightArgdownClient:
@@ -48,4 +48,7 @@ class LightweightArgdownClient:
         return ArgdownParseResult(ok=True, error=None)
 
     def dung_extensions(self, source: str) -> DungExtensionResult:
+        # source is intentionally unused in v0.2.0 — real Dung-extension
+        # computation is deferred to v0.3.0. The parameter is part of the
+        # Protocol contract and must remain in the signature.
         return DungExtensionResult(in_=[], out=[], undec=[])
