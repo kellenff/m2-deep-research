@@ -6,6 +6,7 @@ from src.brainstorm.critic import (
     SteelmanPair,
     DungExtension,
     CriticTurn,
+    render_addendum,
 )
 
 
@@ -193,3 +194,59 @@ def test_build_critic_messages_retry_includes_error_feedback_as_first_user_msg()
     # Original round summary follows.
     assert messages[1]["role"] == "user"
     assert "prag r1" in messages[1]["content"]
+
+
+def _ok_critic_turn(round: int = 1) -> CriticTurn:
+    return CriticTurn(
+        round=round,
+        speaker="critic",
+        turns_under_review=[f"claude_r{round}", f"pragmatist_r{round}"],
+        factual_assertions=[],
+        assumptions=[
+            Assumption(speaker="claude", premise="cross-platform Keychain is simple",
+                       argued_for=False),
+            Assumption(speaker="pragmatist", premise="Redis is deployed", argued_for=False),
+        ],
+        steelman=SteelmanPair(
+            claude="JWT with refresh tokens is self-contained.",
+            pragmatist="Redis blocklist scales fine here.",
+        ),
+        anti_steelman=SteelmanPair(
+            claude="JWT only works if mobile clients can store tokens safely.",
+            pragmatist="Blocklist breaks at scale; sets get huge.",
+        ),
+        argdown="[A]: ...\n  -> [B]: ...",
+        dung_extension=DungExtension(in_=["A"], out=["B"], undec=[]),
+        status="ok",
+        error=None,
+        raw_text=None,
+    )
+
+
+def test_render_addendum_for_claude_speaker():
+    ct = _ok_critic_turn()
+    addendum = render_addendum(ct, target_speaker="claude")
+
+    # Includes claude's own anti_steelman.
+    assert "JWT only works if mobile clients can store tokens safely." in addendum
+    # Includes claude's flagged assumption (argued_for=False).
+    assert "cross-platform Keychain is simple" in addendum
+    # Includes pragmatist's steelman (opposing).
+    assert "Redis blocklist scales fine here." in addendum
+    # Does NOT include claude's own steelman (only opposing steelman is shown).
+    assert "JWT with refresh tokens is self-contained" not in addendum
+    # Does NOT include pragmatist's anti_steelman or assumption.
+    assert "Blocklist breaks at scale" not in addendum
+    assert "Redis is deployed" not in addendum
+
+
+def test_render_addendum_for_pragmatist_speaker():
+    ct = _ok_critic_turn()
+    addendum = render_addendum(ct, target_speaker="pragmatist")
+
+    assert "Blocklist breaks at scale" in addendum
+    assert "Redis is deployed" in addendum
+    assert "JWT with refresh tokens is self-contained" in addendum
+    assert "Redis blocklist scales fine here" not in addendum
+    assert "JWT only works if mobile clients" not in addendum
+    assert "cross-platform Keychain is simple" not in addendum

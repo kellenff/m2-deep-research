@@ -188,3 +188,47 @@ def build_critic_messages(
         })
 
     return messages
+
+
+def render_addendum(
+    critic_turn: CriticTurn,
+    *,
+    target_speaker: Literal["claude", "pragmatist"],
+) -> str:
+    """Render a per-speaker system-prompt addendum from a critic turn.
+
+    The target_speaker sees:
+      - their own anti_steelman
+      - their own undefended assumptions (argued_for=False)
+      - the OPPOSING speaker's steelman
+
+    Returns the empty string when the critic turn has status="unavailable"
+    (graceful degradation: no augmentation that round).
+    """
+    if critic_turn.status == "unavailable":
+        return ""
+
+    opposing = "pragmatist" if target_speaker == "claude" else "claude"
+    parts: list[str] = [f"Critic feedback from round {critic_turn.round}:", ""]
+
+    target_anti = getattr(critic_turn.anti_steelman, target_speaker)
+    parts.append("Your weakest claim (the version to defend or retract):")
+    parts.append(f'  "{target_anti}"')
+    parts.append("")
+
+    own_undefended = [
+        a.premise
+        for a in critic_turn.assumptions
+        if a.speaker == target_speaker and not a.argued_for
+    ]
+    if own_undefended:
+        parts.append("Undefended assumptions you relied on:")
+        for premise in own_undefended:
+            parts.append(f'  - "{premise}"')
+        parts.append("")
+
+    opposing_steel = getattr(critic_turn.steelman, opposing)
+    parts.append("The opposing steelman to engage with:")
+    parts.append(f'  "{opposing_steel}"')
+
+    return "\n".join(parts)
