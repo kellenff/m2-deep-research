@@ -365,3 +365,50 @@ def test_run_critic_step_retries_once_on_json_failure_then_succeeds():
     assert retry_msgs[0]["role"] == "user"
     assert "Previous output failed validation" in retry_msgs[0]["content"]
     assert "invalid JSON" in retry_msgs[0]["content"]
+
+
+def test_run_critic_step_returns_sentinel_after_two_failures():
+    """After two consecutive JSON validation failures, return unavailable status."""
+    bad_text_1 = "not json 1 {"
+    bad_text_2 = "not json 2 {"
+    generator = _StubGenerator([bad_text_1, bad_text_2])
+    argdown = _StubArgdownClient()
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+
+    critic_turn = run_critic_step(
+        turns=turns,
+        current_round=1,
+        generator=generator,
+        argdown_client=argdown,
+        critic_temperature=0.3,
+    )
+
+    assert critic_turn.status == "unavailable"
+    assert "invalid JSON" in critic_turn.error
+    assert len(generator.calls) == 2
+
+
+def test_run_critic_step_calls_generator_at_most_twice():
+    """Generator is called at most twice (initial + one retry)."""
+    payload = _well_formed_critic_payload()
+    generator = _StubGenerator([json.dumps(payload)])
+    argdown = _StubArgdownClient()
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+
+    critic_turn = run_critic_step(
+        turns=turns,
+        current_round=1,
+        generator=generator,
+        argdown_client=argdown,
+        critic_temperature=0.3,
+    )
+
+    assert critic_turn.status == "ok"
+    assert len(generator.calls) == 1
+    assert len(generator.calls) <= 2
