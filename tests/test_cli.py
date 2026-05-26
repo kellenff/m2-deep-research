@@ -107,3 +107,58 @@ def test_main_returns_exit_code_1_on_api_error(tmp_path):
     )
 
     assert exit_code == 1
+
+
+def test_parse_args_critique_defaults_to_false():
+    args = cli.parse_args([
+        "--prompt", "topic",
+        "--claude-thoughts", "seed",
+        "--output", "/tmp/out.json",
+    ])
+    assert args.critique is False
+
+
+def test_parse_args_critique_flag_sets_true():
+    args = cli.parse_args([
+        "--prompt", "topic",
+        "--claude-thoughts", "seed",
+        "--critique",
+        "--output", "/tmp/out.json",
+    ])
+    assert args.critique is True
+
+
+def test_parse_args_critic_temperature_defaults_to_0_3():
+    args = cli.parse_args([
+        "--prompt", "topic",
+        "--claude-thoughts", "seed",
+        "--output", "/tmp/out.json",
+    ])
+    assert args.critic_temperature == 0.3
+
+
+def test_parse_args_critic_temperature_accepts_valid_value():
+    args = cli.parse_args([
+        "--prompt", "topic",
+        "--claude-thoughts", "seed",
+        "--critic-temperature", "0.5",
+        "--output", "/tmp/out.json",
+    ])
+    assert args.critic_temperature == 0.5
+
+
+def test_parse_args_critic_temperature_rejects_out_of_range():
+    with pytest.raises(SystemExit):
+        cli.parse_args([
+            "--prompt", "topic",
+            "--claude-thoughts", "seed",
+            "--critic-temperature", "1.5",
+            "--output", "/tmp/out.json",
+        ])
+    with pytest.raises(SystemExit):
+        cli.parse_args([
+            "--prompt", "topic",
+            "--claude-thoughts", "seed",
+            "--critic-temperature", "-0.1",
+            "--output", "/tmp/out.json",
+        ])

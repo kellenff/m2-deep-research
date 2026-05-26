@@ -22,6 +22,15 @@ def _max_rounds_type(value: str) -> int:
     return n
 
 
+def _critic_temperature_type(value: str) -> float:
+    f = float(value)
+    if not 0.0 <= f <= 1.0:
+        raise argparse.ArgumentTypeError(
+            "critic_temperature must be between 0.0 and 1.0"
+        )
+    return f
+
+
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="brainstorm",
@@ -43,6 +52,17 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--output",
         default=_default_output_path(),
         help="Path to write the JSON transcript.",
+    )
+    parser.add_argument(
+        "--critique",
+        action="store_true",
+        help="Enable the critic voice (3 turns per round; 3N total turns).",
+    )
+    parser.add_argument(
+        "--critic-temperature",
+        type=_critic_temperature_type,
+        default=0.3,
+        help="Temperature for the critic call (default 0.3; range 0.0-1.0).",
     )
     return parser.parse_args(argv)
 
