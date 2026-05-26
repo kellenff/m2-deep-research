@@ -412,3 +412,52 @@ def test_run_critic_step_calls_generator_at_most_twice():
     assert critic_turn.status == "ok"
     assert len(generator.calls) == 1
     assert len(generator.calls) <= 2
+
+
+def test_run_critic_step_retries_on_argdown_parse_failure_then_succeeds():
+    """When argdown.parse fails on first attempt, retry with error feedback."""
+    payload = _well_formed_critic_payload()
+    generator = _StubGenerator([json.dumps(payload), json.dumps(payload)])
+    parse_fail = ArgdownParseResult(ok=False, error="invalid argdown syntax")
+    parse_ok = ArgdownParseResult(ok=True, error=None)
+    argdown = _StubArgdownClient(parse_results=[parse_fail, parse_ok])
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+
+    critic_turn = run_critic_step(
+        turns=turns,
+        current_round=1,
+        generator=generator,
+        argdown_client=argdown,
+        critic_temperature=0.3,
+    )
+
+    assert critic_turn.status == "ok"
+    assert len(generator.calls) == 2
+    assert argdown.parse_calls == 2
+
+
+def test_run_critic_step_does_not_call_dung_extensions_on_parse_failure():
+    """When argdown.parse fails and we give up, never call dung_extensions."""
+    bad_text_1 = "not json 1 {"
+    bad_text_2 = "not json 2 {"
+    generator = _StubGenerator([bad_text_1, bad_text_2])
+    parse_fail = ArgdownParseResult(ok=False, error="invalid syntax")
+    argdown = _StubArgdownClient(parse_results=[parse_fail, parse_fail])
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+
+    critic_turn = run_critic_step(
+        turns=turns,
+        current_round=1,
+        generator=generator,
+        argdown_client=argdown,
+        critic_temperature=0.3,
+    )
+
+    assert critic_turn.status == "unavailable"
+    assert argdown.dung_calls == 0
