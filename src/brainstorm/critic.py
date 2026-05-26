@@ -6,7 +6,7 @@ domain values, plus the addendum rendering and per-round orchestration.
 
 import json
 from dataclasses import dataclass
-from typing import Literal
+from typing import Callable, Literal
 
 
 CRITIC_SYSTEM_PROMPT = """You are the critic. You moderate a brainstorming dialogue between two
@@ -232,3 +232,74 @@ def render_addendum(
     parts.append(f'  "{opposing_steel}"')
 
     return "\n".join(parts)
+
+
+def run_critic_step(
+    *,
+    turns: list[dict],
+    current_round: int,
+    generator: Callable[..., str],
+    argdown_client,  # ArgdownClient Protocol
+    critic_temperature: float,
+) -> CriticTurn:
+    """Run one critic call. At most one retry on validation failure.
+
+    Returns a CriticTurn with status="ok" on success or status="unavailable"
+    on persistent failure. No exceptions are raised — errors are data.
+    """
+    expected_ids = [f"claude_r{current_round}", f"pragmatist_r{current_round}"]
+    last_error: str | None = None
+    last_text: str | None = None
+
+    for _attempt in (0, 1):
+        messages = build_critic_messages(
+            turns, current_round=current_round, last_error=last_error,
+        )
+        text = generator(
+            system=CRITIC_SYSTEM_PROMPT,
+            messages=messages,
+            temperature=critic_temperature,
+        )
+        last_text = text
+
+        validation = validate_critic_json(text)
+        if validation.error:
+            last_error = validation.error
+            continue
+
+        parsed = validation.payload
+        argdown_check = argdown_client.parse(parsed.argdown)
+        if not argdown_check.ok:
+            last_error = f"argdown.parse failed: {argdown_check.error}"
+            continue
+
+        dung = argdown_client.dung_extensions(parsed.argdown)
+        return CriticTurn(
+            round=current_round,
+            speaker="critic",
+            turns_under_review=parsed.turns_under_review,
+            factual_assertions=parsed.factual_assertions,
+            assumptions=parsed.assumptions,
+            steelman=parsed.steelman,
+            anti_steelman=parsed.anti_steelman,
+            argdown=parsed.argdown,
+            dung_extension=DungExtension(in_=dung.in_, out=dung.out, undec=dung.undec),
+            status="ok",
+            error=None,
+            raw_text=None,
+        )
+
+    return CriticTurn(
+        round=current_round,
+        speaker="critic",
+        turns_under_review=expected_ids,
+        factual_assertions=[],
+        assumptions=[],
+        steelman=SteelmanPair(claude="", pragmatist=""),
+        anti_steelman=SteelmanPair(claude="", pragmatist=""),
+        argdown="",
+        dung_extension=DungExtension(in_=[], out=[], undec=[]),
+        status="unavailable",
+        error=last_error,
+        raw_text=last_text,
+    )

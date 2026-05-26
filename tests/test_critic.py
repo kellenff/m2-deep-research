@@ -280,3 +280,64 @@ def test_render_addendum_returns_empty_string_for_unavailable_status():
     ct.error = "argdown.parse failed: ..."
     addendum = render_addendum(ct, target_speaker="claude")
     assert addendum == ""
+
+
+from src.brainstorm.critic import run_critic_step
+from src.brainstorm.argdown_client import ArgdownParseResult, DungExtensionResult
+
+
+class _StubGenerator:
+    def __init__(self, responses: list[str]):
+        self._responses = list(responses)
+        self.calls: list[dict] = []
+
+    def __call__(self, system, messages, temperature):
+        self.calls.append({"system": system, "messages": messages, "temperature": temperature})
+        return self._responses.pop(0)
+
+
+class _StubArgdownClient:
+    def __init__(self, *, parse_results=None, extension=None):
+        self._parse_results = list(parse_results or [ArgdownParseResult(ok=True, error=None)])
+        self._extension = extension or DungExtensionResult(in_=["A"], out=["B"], undec=[])
+        self.parse_calls = 0
+        self.dung_calls = 0
+
+    def parse(self, source):
+        self.parse_calls += 1
+        if self._parse_results:
+            return self._parse_results.pop(0)
+        return ArgdownParseResult(ok=True, error=None)
+
+    def dung_extensions(self, source):
+        self.dung_calls += 1
+        return self._extension
+
+
+def test_run_critic_step_happy_path_returns_ok_status():
+    payload = _well_formed_critic_payload()
+    generator = _StubGenerator([json.dumps(payload)])
+    argdown = _StubArgdownClient()
+    turns = [
+        {"round": 1, "speaker": "claude", "text": "seed"},
+        {"round": 1, "speaker": "pragmatist", "text": "prag r1"},
+    ]
+
+    critic_turn = run_critic_step(
+        turns=turns,
+        current_round=1,
+        generator=generator,
+        argdown_client=argdown,
+        critic_temperature=0.3,
+    )
+
+    assert critic_turn.status == "ok"
+    assert critic_turn.error is None
+    assert critic_turn.raw_text is None
+    assert critic_turn.round == 1
+    assert critic_turn.speaker == "critic"
+    assert critic_turn.turns_under_review == ["claude_r1", "pragmatist_r1"]
+    assert critic_turn.factual_assertions[0].claim == "Postgres has transactions."
+    assert critic_turn.dung_extension.in_ == ["A"]
+    assert len(generator.calls) == 1
+    assert generator.calls[0]["temperature"] == 0.3
