@@ -1,10 +1,10 @@
-# MiniMax-M2.1 Deep Research Agent
+# MiniMax-M2.7-highspeed Deep Research Agent
 
-A sophisticated research tool powered by **Minimax M2.1** with interleaved thinking, **Exa** neural search, and multi-agent orchestration.
+A sophisticated research tool powered by **MiniMax-M2.7-highspeed** with interleaved thinking, **Exa** neural search, and multi-agent orchestration.
 
 ## Features
 
-- **Minimax M2.1 Supervisor**: Uses interleaved thinking to maintain reasoning state across multi-step research
+- **MiniMax-M2.7-highspeed Supervisor**: Uses interleaved thinking to maintain reasoning state across multi-step research
 - **Intelligent Planning**: Automatically decomposes research queries into optimized subqueries
 - **Neural Web Search**: Leverages Exa API for high-quality, AI-powered web search
 - **Comprehensive Reports**: Generates detailed research reports with citations and analysis
@@ -15,7 +15,7 @@ A sophisticated research tool powered by **Minimax M2.1** with interleaved think
 ```
 +-----------------------------------------------+
 |            Supervisor Agent                   |
-|    (Minimax M2.1 + Interleaved Thinking)      |
+|  (MiniMax-M2.7-highspeed + Interleaved Think) |
 +-----------------------------------------------+
                       |
        +--------------+--------------+
@@ -23,8 +23,8 @@ A sophisticated research tool powered by **Minimax M2.1** with interleaved think
        v              v              v
 +------------+ +-------------+ +-----------+
 |  Planning  | | Web Search  | | Synthesis |
-|   Agent    | |  Retriever  | |  (M2.1)   |
-|  (Gemini)  | |             | |           |
+|   Agent    | |  Retriever  | |  (M2.7-hs)|
+| (M2.7-hs)  | | (M2.7-hs)   | |           |
 +------------+ +-------------+ +-----------+
                       |
                       v
@@ -37,9 +37,9 @@ A sophisticated research tool powered by **Minimax M2.1** with interleaved think
 
 | Agent | Model | Role |
 |-------|-------|------|
-| **Supervisor** | Minimax M2.1 | Coordinates workflow, synthesizes final report |
-| **Planning** | Gemini 2.5 Flash | Generates optimized subqueries |
-| **Web Search** | Gemini 2.5 Flash + Exa | Executes searches, organizes findings |
+| **Supervisor** | MiniMax-M2.7-highspeed | Coordinates workflow, synthesizes final report |
+| **Planning** | MiniMax-M2.7-highspeed | Generates optimized subqueries |
+| **Web Search** | MiniMax-M2.7-highspeed + Exa | Executes searches, organizes findings |
 
 ---
 
@@ -67,8 +67,7 @@ uv run python main.py -q "Your research query here"
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) package manager
 - API keys for:
-  - Minimax (M2.1 model)
-  - OpenRouter (for Gemini)
+  - Minimax (M2.7-highspeed model)
   - Exa (web search)
 
 ### Setup
@@ -87,7 +86,6 @@ cp .env.example .env
 Edit `.env` and add your API keys:
 ```
 MINIMAX_API_KEY=your_minimax_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
 EXA_API_KEY=your_exa_api_key_here
 ```
 
@@ -164,7 +162,7 @@ The **Web Search Retriever** executes each subquery using Exa:
 
 ### 3. Synthesis
 
-The **Supervisor Agent** (Minimax M2.1):
+The **Supervisor Agent** (MiniMax-M2.7-highspeed):
 - Maintains reasoning state via interleaved thinking
 - Synthesizes comprehensive report with:
   - Table of contents
@@ -188,7 +186,7 @@ deep-research-agent/
 ├── pyproject.toml             # Dependencies
 └── src/
     ├── agents/
-    │   ├── supervisor.py           # Minimax M2.1 supervisor
+    │   ├── supervisor.py           # MiniMax-M2.7-highspeed supervisor
     │   ├── planning_agent.py       # Query planning
     │   └── web_search_retriever.py # Exa search integration
     ├── tools/
@@ -205,8 +203,7 @@ deep-research-agent/
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| Minimax M2.1 | [platform.minimax.io](https://platform.minimax.io) | Supervisor reasoning |
-| OpenRouter | [openrouter.ai](https://openrouter.ai) | Planning agent (Gemini) |
+| MiniMax | [platform.minimax.io](https://platform.minimax.io) | All agent reasoning (M2.7-highspeed) |
 | Exa | [exa.ai](https://exa.ai) | Neural web search |
 
 ---
@@ -269,7 +266,6 @@ MIT License
 ## Acknowledgments
 
 Built with:
-- [Minimax M2.1](https://www.minimax.io/) - Advanced reasoning model
+- [MiniMax-M2.7-highspeed](https://www.minimax.io/) - Advanced reasoning model
 - [Exa](https://exa.ai/) - Neural web search
 - [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-python) - API client
-- [OpenRouter](https://openrouter.ai/) - LLM routing

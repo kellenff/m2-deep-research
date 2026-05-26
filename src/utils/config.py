@@ -13,12 +13,7 @@ class Config:
     # Minimax API Configuration
     MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY")
     MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
-    MINIMAX_MODEL = "MiniMax-M2.1"
-
-    # OpenRouter API Configuration
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-    OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL = "google/gemini-2.5-flash"
+    MINIMAX_MODEL = "MiniMax-M2.7-highspeed"
 
     # Exa API Configuration
     EXA_API_KEY = os.getenv("EXA_API_KEY")
@@ -31,8 +26,6 @@ class Config:
 
         if not cls.MINIMAX_API_KEY:
             missing.append("MINIMAX_API_KEY")
-        if not cls.OPENROUTER_API_KEY:
-            missing.append("OPENROUTER_API_KEY")
         if not cls.EXA_API_KEY:
             missing.append("EXA_API_KEY")
 

@@ -1,7 +1,7 @@
 """Planning Agent for generating Exa-optimized research subqueries."""
 
 import json
-import httpx
+import anthropic
 from typing import Dict, Any, List
 from src.utils.config import Config
 
@@ -9,14 +9,16 @@ from src.utils.config import Config
 class PlanningAgent:
     """
     Agent that decomposes research queries into Exa-optimized subqueries.
-    Uses OpenRouter with Gemini 2.5 Flash.
+    Uses MiniMax-M2.7-highspeed via the Anthropic-compatible endpoint.
     """
 
     def __init__(self):
         """Initialize Planning Agent."""
-        self.api_key = Config.OPENROUTER_API_KEY
-        self.base_url = Config.OPENROUTER_BASE_URL
-        self.model = Config.OPENROUTER_MODEL
+        self.client = anthropic.Anthropic(
+            api_key=Config.MINIMAX_API_KEY,
+            base_url=Config.MINIMAX_BASE_URL,
+        )
+        self.model = Config.MINIMAX_MODEL
 
         self.system_prompt = """Generate 8-12 comprehensive Exa-optimized subqueries for deep research on the topic.
 
@@ -70,62 +72,49 @@ Notes:
         Returns:
             Dictionary containing subqueries with optimization parameters
         """
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": self.system_prompt},
-                {
-                    "role": "user",
-                    "content": f"Research topic: {research_query}\n\nGenerate Exa-optimized subqueries for comprehensive research on this topic.",
-                },
-            ],
-            "temperature": 0.7,
-            "max_tokens": 3000,
-        }
-
         try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=headers,
-                )
-                response.raise_for_status()
-                result = response.json()
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=3000,
+                temperature=0.7,
+                system=self.system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Research topic: {research_query}\n\nGenerate Exa-optimized subqueries for comprehensive research on this topic.",
+                    },
+                ],
+            )
 
-                # Extract the content from the response
-                content = result["choices"][0]["message"]["content"]
+            content = "".join(
+                block.text for block in response.content
+                if hasattr(block, "type") and block.type == "text"
+            )
 
-                # Parse the JSON response
-                # Handle potential markdown code blocks
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
+            # Strip markdown code fences if the model wrapped JSON in them
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
 
-                subqueries_data = json.loads(content)
+            subqueries_data = json.loads(content)
 
-                return {
-                    "status": "success",
-                    "subqueries": subqueries_data.get("subqueries", []),
-                    "research_query": research_query,
-                }
-
-        except httpx.HTTPError as e:
             return {
-                "status": "error",
-                "error": f"HTTP error: {str(e)}",
-                "subqueries": [],
+                "status": "success",
+                "subqueries": subqueries_data.get("subqueries", []),
+                "research_query": research_query,
             }
+
         except json.JSONDecodeError as e:
             return {
                 "status": "error",
                 "error": f"JSON parsing error: {str(e)}",
+                "subqueries": [],
+            }
+        except anthropic.APIError as e:
+            return {
+                "status": "error",
+                "error": f"API error: {str(e)}",
                 "subqueries": [],
             }
         except Exception as e:

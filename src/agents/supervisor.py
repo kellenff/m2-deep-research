@@ -1,4 +1,4 @@
-"""Supervisor Agent using Minimax M2.1 with interleaved thinking."""
+"""Supervisor Agent using MiniMax-M2.7-highspeed with interleaved thinking."""
 
 import anthropic
 from typing import List, Dict, Any
@@ -224,7 +224,7 @@ Research Workflow:
 
     def research(self, query: str, max_iterations: int = 10) -> str:
         """
-        Conduct research on a given query using Minimax M2.1 with interleaved thinking.
+        Conduct research on a given query using MiniMax-M2.7-highspeed with interleaved thinking.
 
         Args:
             query: Research question or topic
@@ -247,8 +247,8 @@ Research Workflow:
             iteration += 1
 
             try:
-                # Call Minimax M2.1 with streaming for long requests
-                console.print(f"[bold magenta][Iteration {iteration}][/bold magenta] [cyan]Calling Minimax M2.1...[/cyan]")
+                # Call MiniMax-M2.7-highspeed with streaming for long requests
+                console.print(f"[bold magenta][Iteration {iteration}][/bold magenta] [cyan]Calling MiniMax-M2.7-highspeed...[/cyan]")
 
                 with self.client.messages.stream(
                     model=self.model,
