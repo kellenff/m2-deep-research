@@ -46,16 +46,15 @@ A sophisticated research tool powered by **MiniMax-M2.7-highspeed** with interle
 ## Quick Start
 
 ```bash
-# Clone and setup
-cd deep-research-agent
-uv sync
+# Install (downloads pre-compiled binary for your platform)
+bash .claude/plugins/m2-brainstorm/install.sh
 
 # Configure API keys
 cp .env.example .env
 # Edit .env with your keys
 
 # Run
-uv run python main.py -q "Your research query here"
+"$HOME/.config/m2-brainstorm/bin/m2-research" -q "Your research query here"
 ```
 
 ---
@@ -64,19 +63,27 @@ uv run python main.py -q "Your research query here"
 
 ### Prerequisites
 
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) package manager
 - API keys for:
   - Minimax (M2.7-highspeed model)
   - Exa (web search)
+- For pre-compiled binaries: no other dependencies.
+- For the `deno run` source fallback (unsupported platforms): [Deno](https://deno.land) 1.x on PATH.
 
 ### Setup
 
-1. **Install dependencies**:
+1. **Install binaries** (auto-detects platform — Linux x64/arm64, macOS x64/arm64, Windows x64):
+
 ```bash
-cd deep-research-agent
-uv sync
+bash .claude/plugins/m2-brainstorm/install.sh
 ```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .claude\plugins\m2-brainstorm\install.ps1
+```
+
+The script downloads pre-compiled binaries for your target triple and installs them to `~/.config/m2-brainstorm/bin/`. If your platform isn't in the matrix, it falls back to a `deno run` wrapper against the bundled source.
 
 2. **Configure environment variables**:
 ```bash
@@ -96,7 +103,7 @@ EXA_API_KEY=your_exa_api_key_here
 ### Interactive Mode
 
 ```bash
-uv run python main.py
+m2-research
 ```
 
 Then enter your research queries at the prompt.
@@ -104,19 +111,19 @@ Then enter your research queries at the prompt.
 ### Single Query Mode
 
 ```bash
-uv run python main.py -q "What are the latest developments in quantum computing?"
+m2-research -q "What are the latest developments in quantum computing?"
 ```
 
 ### Save Report to File
 
 ```bash
-uv run python main.py -q "AI trends in 2025" --save
+m2-research -q "AI trends in 2025" --save
 ```
 
 ### Verbose Mode
 
 ```bash
-uv run python main.py -q "Climate change solutions" --verbose
+m2-research -q "Climate change solutions" --verbose
 ```
 
 ### CLI Options
@@ -180,19 +187,25 @@ The key innovation: the supervisor preserves ALL content blocks (thinking + text
 ## Project Structure
 
 ```
-deep-research-agent/
-├── main.py                    # CLI entry point
+m2-deep-research/
+├── brainstorm.ts              # Brainstorm CLI entry
+├── research.ts                # Research CLI entry
+├── deno.json                  # Tasks + imports + compiler options
 ├── .env.example               # Environment template
-├── pyproject.toml             # Dependencies
 └── src/
     ├── agents/
-    │   ├── supervisor.py           # MiniMax-M2.7-highspeed supervisor
-    │   ├── planning_agent.py       # Query planning
-    │   └── web_search_retriever.py # Exa search integration
+    │   ├── supervisor.ts           # Interleaved-thinking agent runner
+    │   ├── planning_agent.ts       # Query planning
+    │   └── web_search_retriever.ts # Exa search + LLM synthesis
+    ├── brainstorm/
+    │   ├── cli.ts                  # Brainstorm argparse + main()
+    │   ├── dialogue.ts             # Two-persona dialogue + critic integration
+    │   ├── critic.ts               # Critic voice (steelman + argdown)
+    │   └── argdown_client.ts       # LightweightArgdownClient + DenoArgdownClient
     ├── tools/
-    │   └── exa_tool.py             # Exa API wrapper
+    │   └── exa_tool.ts             # Exa API wrapper
     └── utils/
-        └── config.py               # Configuration
+        └── config.ts               # Configuration
 ```
 
 ---
@@ -212,17 +225,17 @@ deep-research-agent/
 
 ### Technology Research
 ```bash
-uv run python main.py -q "What are the latest breakthroughs in artificial general intelligence?"
+m2-research -q "What are the latest breakthroughs in artificial general intelligence?"
 ```
 
 ### Business Intelligence
 ```bash
-uv run python main.py -q "What are the emerging trends in electric vehicle adoption?" --save
+m2-research -q "What are the emerging trends in electric vehicle adoption?" --save
 ```
 
 ### Scientific Research
 ```bash
-uv run python main.py -q "What are the most promising approaches to carbon capture technology?" --verbose
+m2-research -q "What are the most promising approaches to carbon capture technology?" --verbose
 ```
 
 ---
@@ -230,13 +243,22 @@ uv run python main.py -q "What are the most promising approaches to carbon captu
 ## Customization
 
 ### Adjust Report Style
-Edit system prompt in `src/agents/supervisor.py`
+Edit the supervisor's system prompt in `research.ts`.
 
 ### Modify Search Parameters
-Edit `src/agents/web_search_retriever.py`:
-- `num_results`: Results per query (default: 5-10)
-- `time_period`: Date filtering
-- `content_type`: Filter by type (news, research, blog)
+Edit `src/agents/web_search_retriever.ts`:
+- `numResults`: Results per query (priority-tiered: 20 for priority ≤ 2, else 15)
+- Time-period date filters
+- Content type (`news`, `research`, `auto`, `keyword`)
+
+### Rebuild from Source
+Use the Deno tasks defined in `deno.json`:
+
+```bash
+deno task test               # Run the full test suite
+deno task compile:brainstorm # Compile a portable binary
+deno task compile:research   # Compile the research CLI
+```
 
 ---
 
@@ -246,7 +268,8 @@ Edit `src/agents/web_search_retriever.py`:
 |-------|----------|
 | Missing API keys | Ensure `.env` exists and has all keys set |
 | API errors | Verify keys are valid, check rate limits |
-| Import errors | Run `uv sync` and use `uv run python main.py` |
+| `command not found` | Add `~/.config/m2-brainstorm/bin` to your `PATH`, or call the binary by its full path |
+| Source-fallback install fails | Ensure [Deno](https://deno.land) 1.x is on `PATH` |
 
 ---
 
@@ -268,4 +291,6 @@ MIT License
 Built with:
 - [MiniMax-M2.7-highspeed](https://www.minimax.io/) - Advanced reasoning model
 - [Exa](https://exa.ai/) - Neural web search
-- [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-python) - API client
+- [Anthropic TypeScript SDK](https://github.com/anthropics/anthropic-sdk-typescript) - API client
+- [Deno](https://deno.land) - TypeScript runtime + `deno compile` for portable binaries
+- [Argdown](https://argdown.org) - Argumentation framework (critic voice)
