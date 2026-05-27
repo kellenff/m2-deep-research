@@ -36,12 +36,24 @@ Deno.test("ExaTool.search: returns error shape on non-200", async () => {
   assert(typeof r.error === "string");
 });
 
-Deno.test("ExaTool.formatResults: skips error-shaped entries", () => {
+Deno.test("ExaTool.formatResults: returns empty array for error response", () => {
+  const tool = new ExaTool({ apiKey: "key", fetchImpl: mockFetch([]) });
+  const out = tool.formatResults({
+    error: "boom",
+    status: "failed",
+    results: [],
+  });
+  assertEquals(out, []);
+});
+
+Deno.test("ExaTool.formatResults: returns the results array for a normal response", () => {
   const tool = new ExaTool({ apiKey: "key", fetchImpl: mockFetch([]) });
   const out = tool.formatResults({
     results: [
       { id: "1", title: "Real", url: "u", text: "body" },
     ],
   });
-  assert(out.includes("Real"));
+  assertEquals(out.length, 1);
+  assertEquals(out[0]?.title, "Real");
+  assertEquals(out[0]?.url, "u");
 });

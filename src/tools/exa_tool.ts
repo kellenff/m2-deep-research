@@ -102,19 +102,19 @@ export class ExaTool {
     });
   }
 
-  /** Format results as a human-readable string. Returns "" for error responses. */
-  formatResults(response: ExaResponse): string {
-    if (response.error) return `Error: ${response.error}`;
-    if (!response.results?.length) return "No results found.";
-    const lines: string[] = [];
-    for (const r of response.results) {
-      lines.push(`Title: ${r.title ?? "(no title)"}`);
-      if (r.url) lines.push(`URL: ${r.url}`);
-      if (r.publishedDate) lines.push(`Published: ${r.publishedDate}`);
-      if (r.text) lines.push(`Excerpt: ${r.text.slice(0, 500)}`);
-      lines.push("");
-    }
-    return lines.join("\n");
+  /** Format results into normalized ExaResult[]. Returns [] for error responses. */
+  formatResults(response: ExaResponse): ExaResult[] {
+    if (response.error || !response.results) return [];
+    return response.results.map((r) => ({
+      title: r.title ?? "No title",
+      url: r.url ?? "",
+      author: r.author,
+      publishedDate: r.publishedDate,
+      score: r.score ?? 0,
+      text: r.text ?? "",
+      highlights: r.highlights ?? [],
+      summary: r.summary ?? "",
+    }));
   }
 
   private async post(path: string, body: unknown): Promise<ExaResponse> {
