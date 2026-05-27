@@ -1,14 +1,28 @@
 # m2-brainstorm TypeScript Port Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use snowball:subagent-driven-development (recommended) or snowball:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use snowball:subagent-driven-development
+> (recommended) or snowball:executing-plans to implement this plan task-by-task. Steps use checkbox
+> (`- [ ]`) syntax for tracking.
 
-**Goal:** Port the entire m2-deep-research repository from Python (3.12 + uv + anthropic-py) to TypeScript on Deno, with compiled per-platform binaries shipped via GitHub Releases and a `deno run` fallback against bundled source.
+**Goal:** Port the entire m2-deep-research repository from Python (3.12 + uv + anthropic-py) to
+TypeScript on Deno, with compiled per-platform binaries shipped via GitHub Releases and a `deno run`
+fallback against bundled source.
 
-**Architecture:** Three-layer port mirroring the existing Python structure: a `src/brainstorm/` dialogue + critic engine with an `ArgdownClient` interface (two implementations: subprocess-backed `DenoArgdownClient` and regex-based `LightweightArgdownClient`), a `src/agents/` research half (planning, supervisor with interleaved thinking, Exa-backed search retriever), and two thin entry points (`brainstorm.ts`, `research.ts`) compiled via `deno compile` for five target triples. Distribution is a Claude Code plugin whose install script auto-detects platform and downloads the matching binary or falls back to `deno run` against a source tarball.
+**Architecture:** Three-layer port mirroring the existing Python structure: a `src/brainstorm/`
+dialogue + critic engine with an `ArgdownClient` interface (two implementations: subprocess-backed
+`DenoArgdownClient` and regex-based `LightweightArgdownClient`), a `src/agents/` research half
+(planning, supervisor with interleaved thinking, Exa-backed search retriever), and two thin entry
+points (`brainstorm.ts`, `research.ts`) compiled via `deno compile` for five target triples.
+Distribution is a Claude Code plugin whose install script auto-detects platform and downloads the
+matching binary or falls back to `deno run` against a source tarball.
 
-**Tech Stack:** Deno 1.x, TypeScript (`strict`), `npm:@anthropic-ai/sdk@^0.74`, `jsr:@std/cli` / `@std/dotenv` / `@std/path` / `@std/assert`, `jsr:@argdown/cli` (subprocess), GitHub Actions matrix builds, `softprops/action-gh-release@v1`.
+**Tech Stack:** Deno 1.x, TypeScript (`strict`), `npm:@anthropic-ai/sdk@^0.74`, `jsr:@std/cli` /
+`@std/dotenv` / `@std/path` / `@std/assert`, `jsr:@argdown/cli` (subprocess), GitHub Actions matrix
+builds, `softprops/action-gh-release@v1`.
 
-**Branch:** This plan executes on a feature branch (e.g., `feat/typescript-port`) off `main`. Python is preserved through Task 22 (so both test suites run in parallel during the port) and deleted in Task 23 in the same PR.
+**Branch:** This plan executes on a feature branch (e.g., `feat/typescript-port`) off `main`. Python
+is preserved through Task 22 (so both test suites run in parallel during the port) and deleted in
+Task 23 in the same PR.
 
 **Spec:** `docs/snowball/specs/2026-05-26-m2-brainstorm-typescript-port-design.md`
 
@@ -56,6 +70,7 @@ Python files are preserved until Task 23, then deleted wholesale.
 ## Task 1: Scaffold Deno project
 
 **Files:**
+
 - Create: `deno.json`
 - Create: `.github/workflows/ci.yml`
 - Modify: `.gitignore` (add Deno cache dirs)
@@ -66,19 +81,19 @@ Python files are preserved until Task 23, then deleted wholesale.
 {
   "tasks": {
     "brainstorm": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run brainstorm.ts",
-    "research":   "deno run --allow-net --allow-env --allow-read --allow-write --allow-run research.ts",
-    "test":       "deno test --allow-net --allow-env --allow-read --allow-write --allow-run",
-    "fmt":        "deno fmt",
-    "lint":       "deno lint",
+    "research": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run research.ts",
+    "test": "deno test --allow-net --allow-env --allow-read --allow-write --allow-run",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
     "compile:brainstorm": "deno compile --allow-net --allow-env --allow-read --allow-write --allow-run --output=dist/m2-brainstorm brainstorm.ts",
-    "compile:research":   "deno compile --allow-net --allow-env --allow-read --allow-write --allow-run --output=dist/m2-research research.ts"
+    "compile:research": "deno compile --allow-net --allow-env --allow-read --allow-write --allow-run --output=dist/m2-research research.ts"
   },
   "imports": {
     "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.74",
-    "@std/cli":          "jsr:@std/cli@^1.0",
-    "@std/dotenv":       "jsr:@std/dotenv@^0.225",
-    "@std/path":         "jsr:@std/path@^1.0",
-    "@std/assert":       "jsr:@std/assert@^1.0"
+    "@std/cli": "jsr:@std/cli@^1.0",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225",
+    "@std/path": "jsr:@std/path@^1.0",
+    "@std/assert": "jsr:@std/assert@^1.0"
   },
   "compilerOptions": {
     "strict": true,
@@ -130,8 +145,7 @@ jobs:
 
 - [ ] **Step 4: Run `deno fmt` to verify config is well-formed**
 
-Run: `deno fmt deno.json`
-Expected: no error, file rewritten with canonical formatting.
+Run: `deno fmt deno.json` Expected: no error, file rewritten with canonical formatting.
 
 - [ ] **Step 5: Commit**
 
@@ -145,10 +159,13 @@ git commit -m "scaffold: deno.json + CI workflow"
 ## Task 2: Port `config.ts` with explicit validate
 
 **Files:**
+
 - Create: `src/utils/config.ts`
 - Create: `tests/research/config.test.ts`
 
-The Python `config.py` runs `Config.validate()` at import time (printing on error). The TS port removes that side effect — `validate()` becomes explicit; callers invoke it. This is locked decision from spec ("Side-effect-on-import removed").
+The Python `config.py` runs `Config.validate()` at import time (printing on error). The TS port
+removes that side effect — `validate()` becomes explicit; callers invoke it. This is locked decision
+from spec ("Side-effect-on-import removed").
 
 - [ ] **Step 1: Write the failing test**
 
@@ -191,8 +208,7 @@ Deno.test("makeConfig exposes constants", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `deno test tests/research/config.test.ts --allow-env`
-Expected: FAIL with "Cannot find module".
+Run: `deno test tests/research/config.test.ts --allow-env` Expected: FAIL with "Cannot find module".
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -243,8 +259,7 @@ export const Config: ConfigShape = makeConfig({
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `deno test tests/research/config.test.ts --allow-env`
-Expected: PASS, 4/4.
+Run: `deno test tests/research/config.test.ts --allow-env` Expected: PASS, 4/4.
 
 - [ ] **Step 5: Commit**
 
@@ -258,10 +273,12 @@ git commit -m "port: Config with explicit validate() (no side-effect on import)"
 ## Task 3: Port `LightweightArgdownClient`
 
 **Files:**
+
 - Create: `src/brainstorm/argdown_client.ts`
 - Create: `tests/brainstorm/argdown_client.test.ts`
 
-Port the Python `LightweightArgdownClient` 1:1, including the line-anchored `[Name]:` regex and the always-empty Dung extension. Defines the `ArgdownClient` interface that Task 4 also implements.
+Port the Python `LightweightArgdownClient` 1:1, including the line-anchored `[Name]:` regex and the
+always-empty Dung extension. Defines the `ArgdownClient` interface that Task 4 also implements.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -269,9 +286,7 @@ Create `tests/brainstorm/argdown_client.test.ts`:
 
 ```typescript
 import { assert, assertEquals } from "jsr:@std/assert";
-import {
-  LightweightArgdownClient,
-} from "../../src/brainstorm/argdown_client.ts";
+import { LightweightArgdownClient } from "../../src/brainstorm/argdown_client.ts";
 
 Deno.test("parse rejects source with no labeled arguments", () => {
   const c = new LightweightArgdownClient();
@@ -319,8 +334,7 @@ Deno.test("dungExtensions returns empty extension for empty source", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/argdown_client.test.ts`
-Expected: FAIL with "Cannot find module".
+Run: `deno test tests/brainstorm/argdown_client.test.ts` Expected: FAIL with "Cannot find module".
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -352,8 +366,7 @@ export class LightweightArgdownClient implements ArgdownClient {
     if (!LABELED_ARGUMENT_RE.test(source)) {
       return {
         ok: false,
-        error:
-          "no labeled arguments found (expected at least one [Name]: ...)",
+        error: "no labeled arguments found (expected at least one [Name]: ...)",
       };
     }
     return { ok: true, error: null };
@@ -367,8 +380,7 @@ export class LightweightArgdownClient implements ArgdownClient {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/argdown_client.test.ts`
-Expected: PASS, 6/6.
+Run: `deno test tests/brainstorm/argdown_client.test.ts` Expected: PASS, 6/6.
 
 - [ ] **Step 5: Commit**
 
@@ -382,10 +394,13 @@ git commit -m "port: LightweightArgdownClient + ArgdownClient interface"
 ## Task 4: Add `DenoArgdownClient` (subprocess-backed)
 
 **Files:**
+
 - Modify: `src/brainstorm/argdown_client.ts`
 - Modify: `tests/brainstorm/argdown_client.test.ts`
 
-New implementation that shells out to `deno run jsr:@argdown/cli` for real argdown parsing. The Dung-extension result is parsed from the CLI JSON output. Subprocess interaction is stubbed in tests via dependency-injection of a `CommandRunner`.
+New implementation that shells out to `deno run jsr:@argdown/cli` for real argdown parsing. The
+Dung-extension result is parsed from the CLI JSON output. Subprocess interaction is stubbed in tests
+via dependency-injection of a `CommandRunner`.
 
 - [ ] **Step 1: Append failing tests**
 
@@ -433,8 +448,8 @@ Deno.test("DenoArgdownClient.parse returns !ok with stderr on exit nonzero", asy
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/argdown_client.test.ts`
-Expected: FAIL — `DenoArgdownClient` not exported.
+Run: `deno test tests/brainstorm/argdown_client.test.ts` Expected: FAIL — `DenoArgdownClient` not
+exported.
 
 - [ ] **Step 3: Implement `DenoArgdownClient`**
 
@@ -527,8 +542,8 @@ export class DenoArgdownClient implements ArgdownClient {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/argdown_client.test.ts`
-Expected: PASS, 8/8 (6 lightweight + 2 deno).
+Run: `deno test tests/brainstorm/argdown_client.test.ts` Expected: PASS, 8/8 (6 lightweight + 2
+deno).
 
 - [ ] **Step 5: Commit**
 
@@ -542,10 +557,12 @@ git commit -m "feat: DenoArgdownClient (subprocess-backed argdown)"
 ## Task 5: Port critic dataclasses + `validateCriticJson`
 
 **Files:**
+
 - Create: `src/brainstorm/critic.ts`
 - Create: `tests/brainstorm/critic.test.ts`
 
-Port the dataclasses (as TS interfaces), `CRITIC_SYSTEM_PROMPT` (verbatim), and `validateCriticJson`. Tests cover happy parse, JSON error, missing field, shape error.
+Port the dataclasses (as TS interfaces), `CRITIC_SYSTEM_PROMPT` (verbatim), and
+`validateCriticJson`. Tests cover happy parse, JSON error, missing field, shape error.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -553,10 +570,7 @@ Create `tests/brainstorm/critic.test.ts`:
 
 ```typescript
 import { assert, assertEquals } from "jsr:@std/assert";
-import {
-  CRITIC_SYSTEM_PROMPT,
-  validateCriticJson,
-} from "../../src/brainstorm/critic.ts";
+import { CRITIC_SYSTEM_PROMPT, validateCriticJson } from "../../src/brainstorm/critic.ts";
 
 const VALID_PAYLOAD = {
   turns_under_review: ["claude_r1", "pragmatist_r1"],
@@ -619,8 +633,7 @@ Deno.test("CRITIC_SYSTEM_PROMPT contains JSON schema keywords", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: FAIL with "Cannot find module".
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: FAIL with "Cannot find module".
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -693,7 +706,8 @@ export interface CriticValidationResult {
   error: string | null;
 }
 
-export const CRITIC_SYSTEM_PROMPT = `You are the critic. You moderate a brainstorming dialogue between two
+export const CRITIC_SYSTEM_PROMPT =
+  `You are the critic. You moderate a brainstorming dialogue between two
 personas: claude (a senior dev) and pragmatist (skeptical of hype). After
 each round, you read the round's turns and produce a structured critique.
 
@@ -849,8 +863,7 @@ export function validateCriticJson(text: string): CriticValidationResult {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: PASS, 5/5.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: PASS, 5/5.
 
 - [ ] **Step 5: Commit**
 
@@ -864,10 +877,12 @@ git commit -m "port: critic types, CRITIC_SYSTEM_PROMPT, validateCriticJson"
 ## Task 6: Port `buildCriticMessages`
 
 **Files:**
+
 - Modify: `src/brainstorm/critic.ts`
 - Modify: `tests/brainstorm/critic.test.ts`
 
-Stateless message builder for the critic call. Includes only the current round's claude + pragmatist turns. On retry, prepends an error-feedback message.
+Stateless message builder for the critic call. Includes only the current round's claude + pragmatist
+turns. On retry, prepends an error-feedback message.
 
 - [ ] **Step 1: Append failing tests**
 
@@ -928,8 +943,8 @@ Deno.test("buildCriticMessages: lastError prepends a feedback message", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: FAIL — `buildCriticMessages` not exported.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: FAIL — `buildCriticMessages` not
+exported.
 
 - [ ] **Step 3: Add `buildCriticMessages`**
 
@@ -971,8 +986,7 @@ export function buildCriticMessages(
   if (opts.lastError) {
     messages.unshift({
       role: "user",
-      content:
-        `Previous output failed validation: ${opts.lastError}. ` +
+      content: `Previous output failed validation: ${opts.lastError}. ` +
         `Re-emit the JSON object matching the schema exactly. ` +
         `No prose, no fences.`,
     });
@@ -984,8 +998,7 @@ export function buildCriticMessages(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: PASS, 9/9.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: PASS, 9/9.
 
 - [ ] **Step 5: Commit**
 
@@ -999,10 +1012,12 @@ git commit -m "port: buildCriticMessages"
 ## Task 7: Port `renderAddendum`
 
 **Files:**
+
 - Modify: `src/brainstorm/critic.ts`
 - Modify: `tests/brainstorm/critic.test.ts`
 
-Per-speaker addendum: their own anti-steelman + own undefended assumptions + the opposing steelman. Returns empty string when critic turn is unavailable.
+Per-speaker addendum: their own anti-steelman + own undefended assumptions + the opposing steelman.
+Returns empty string when critic turn is unavailable.
 
 - [ ] **Step 1: Append failing tests**
 
@@ -1077,8 +1092,7 @@ Deno.test("renderAddendum: omits undefended-assumptions block when speaker has n
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: FAIL — `renderAddendum` not exported.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: FAIL — `renderAddendum` not exported.
 
 - [ ] **Step 3: Add `renderAddendum`**
 
@@ -1121,8 +1135,7 @@ export function renderAddendum(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: PASS, 13/13.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: PASS, 13/13.
 
 - [ ] **Step 5: Commit**
 
@@ -1136,10 +1149,12 @@ git commit -m "port: renderAddendum"
 ## Task 8: Port `runCriticStep`
 
 **Files:**
+
 - Modify: `src/brainstorm/critic.ts`
 - Modify: `tests/brainstorm/critic.test.ts`
 
-Orchestrate one critic call with at-most-one retry. Returns `CriticTurnOk` on success or `CriticTurnUnavailable` on persistent failure. No exceptions — errors as data.
+Orchestrate one critic call with at-most-one retry. Returns `CriticTurnOk` on success or
+`CriticTurnUnavailable` on persistent failure. No exceptions — errors as data.
 
 - [ ] **Step 1: Append failing tests**
 
@@ -1151,10 +1166,7 @@ import {
   type ArgdownParseResult,
   type DungExtensionResult,
 } from "../../src/brainstorm/argdown_client.ts";
-import {
-  runCriticStep,
-  type TurnGenerator,
-} from "../../src/brainstorm/critic.ts";
+import { runCriticStep, type TurnGenerator } from "../../src/brainstorm/critic.ts";
 
 class FakeArgdownOk implements ArgdownClient {
   parse(): ArgdownParseResult {
@@ -1246,8 +1258,7 @@ Deno.test("runCriticStep: argdown parse fail twice → status=unavailable", asyn
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: FAIL — `runCriticStep` not exported.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: FAIL — `runCriticStep` not exported.
 
 - [ ] **Step 3: Add `TurnGenerator` and `runCriticStep`**
 
@@ -1342,8 +1353,7 @@ export async function runCriticStep(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/critic.test.ts`
-Expected: PASS, 17/17.
+Run: `deno test tests/brainstorm/critic.test.ts` Expected: PASS, 17/17.
 
 - [ ] **Step 5: Commit**
 
@@ -1357,10 +1367,12 @@ git commit -m "port: runCriticStep with retry-then-sentinel"
 ## Task 9: Port dialogue (without critic)
 
 **Files:**
+
 - Create: `src/brainstorm/dialogue.ts`
 - Create: `tests/brainstorm/dialogue.test.ts`
 
-Foundation port: the two-persona dialogue loop without any critic integration. Tests cover validation, seed-as-verbatim, alternating messages, role inversion, temperature parameters.
+Foundation port: the two-persona dialogue loop without any critic integration. Tests cover
+validation, seed-as-verbatim, alternating messages, role inversion, temperature parameters.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1517,19 +1529,14 @@ Deno.test("run without critic produces v0.1.x shape", async () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/dialogue.test.ts`
-Expected: FAIL — module missing.
+Run: `deno test tests/brainstorm/dialogue.test.ts` Expected: FAIL — module missing.
 
 - [ ] **Step 3: Implement dialogue**
 
 Create `src/brainstorm/dialogue.ts`:
 
 ```typescript
-import type {
-  ApiMessage,
-  DialogueTurn,
-  TurnGenerator,
-} from "./critic.ts";
+import type { ApiMessage, DialogueTurn, TurnGenerator } from "./critic.ts";
 
 export type { DialogueTurn, TurnGenerator };
 
@@ -1555,15 +1562,13 @@ export async function run(args: RunArgs): Promise<Transcript> {
     throw new Error("max_rounds must be between 1 and 5");
   }
 
-  const pragmatistSystem =
-    "You are MiniMax, a pragmatist focused on what devs actually need, " +
+  const pragmatistSystem = "You are MiniMax, a pragmatist focused on what devs actually need, " +
     "skeptical of hype. You're in a brainstorm with Claude, a senior dev " +
     "who appreciates elegant engineering. Push back on shallow excitement. " +
     "Concrete examples only.\n\n" +
     `Brainstorm topic: ${args.prompt}`;
 
-  const claudeSynthSystem =
-    "You are role-playing Claude, a senior dev whose excitement is " +
+  const claudeSynthSystem = "You are role-playing Claude, a senior dev whose excitement is " +
     "technical, not marketing. Build on the pragmatist's last response — " +
     "find what's interesting, raise a new technical angle, don't just agree.\n\n" +
     `Brainstorm topic: ${args.prompt}\n\n` +
@@ -1599,8 +1604,7 @@ export async function run(args: RunArgs): Promise<Transcript> {
     maxRounds: args.maxRounds,
     model: "MiniMax-M2.7-highspeed",
     turns,
-    synthesisHint:
-      "The synthesis MUST contain ideas neither role had alone. " +
+    synthesisHint: "The synthesis MUST contain ideas neither role had alone. " +
       "Look across turns for emergent positioning.",
   };
 }
@@ -1629,8 +1633,7 @@ export function messagesForClaudeSynth(turns: DialogueTurn[]): ApiMessage[] {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/dialogue.test.ts`
-Expected: PASS, 11/11.
+Run: `deno test tests/brainstorm/dialogue.test.ts` Expected: PASS, 11/11.
 
 - [ ] **Step 5: Commit**
 
@@ -1644,10 +1647,13 @@ git commit -m "port: dialogue.run (two-persona loop)"
 ## Task 10: Integrate critic into dialogue
 
 **Files:**
+
 - Modify: `src/brainstorm/dialogue.ts`
 - Modify: `tests/brainstorm/dialogue.test.ts`
 
-Add `criticGenerator`, `argdownClient`, `criticTemperature` kwargs. Validate both-or-neither. Inject per-round critic step. Augment next-round system prompts with `renderAddendum`. Skip sentinel turns from augmentation. Serialize critic turns to JSON-friendly dicts.
+Add `criticGenerator`, `argdownClient`, `criticTemperature` kwargs. Validate both-or-neither. Inject
+per-round critic step. Augment next-round system prompts with `renderAddendum`. Skip sentinel turns
+from augmentation. Serialize critic turns to JSON-friendly dicts.
 
 - [ ] **Step 1: Append failing tests**
 
@@ -1722,9 +1728,15 @@ Deno.test("run: critic mode produces 3N turns in correct order", async () => {
   assertEquals(t.turns.length, 9);
   const speakers = t.turns.map((x) => x.speaker);
   assertEquals(speakers, [
-    "claude", "pragmatist", "critic",
-    "claude", "pragmatist", "critic",
-    "claude", "pragmatist", "critic",
+    "claude",
+    "pragmatist",
+    "critic",
+    "claude",
+    "pragmatist",
+    "critic",
+    "claude",
+    "pragmatist",
+    "critic",
   ]);
 });
 
@@ -1791,8 +1803,8 @@ Deno.test("run: sentinel critic does not augment next round", async () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/dialogue.test.ts`
-Expected: FAIL — `criticGenerator` arg not recognized.
+Run: `deno test tests/brainstorm/dialogue.test.ts` Expected: FAIL — `criticGenerator` arg not
+recognized.
 
 - [ ] **Step 3: Extend `run` with critic integration**
 
@@ -1806,10 +1818,7 @@ import type {
   DialogueTurn,
   TurnGenerator,
 } from "./critic.ts";
-import {
-  renderAddendum,
-  runCriticStep,
-} from "./critic.ts";
+import { renderAddendum, runCriticStep } from "./critic.ts";
 import type { ArgdownClient } from "./argdown_client.ts";
 
 export type { DialogueTurn, TurnGenerator };
@@ -1845,15 +1854,13 @@ export async function run(args: RunArgs): Promise<Transcript> {
     throw new Error("argdown_client requires critic_generator (or pass neither)");
   }
 
-  const pragmatistSystem =
-    "You are MiniMax, a pragmatist focused on what devs actually need, " +
+  const pragmatistSystem = "You are MiniMax, a pragmatist focused on what devs actually need, " +
     "skeptical of hype. You're in a brainstorm with Claude, a senior dev " +
     "who appreciates elegant engineering. Push back on shallow excitement. " +
     "Concrete examples only.\n\n" +
     `Brainstorm topic: ${args.prompt}`;
 
-  const claudeSynthSystem =
-    "You are role-playing Claude, a senior dev whose excitement is " +
+  const claudeSynthSystem = "You are role-playing Claude, a senior dev whose excitement is " +
     "technical, not marketing. Build on the pragmatist's last response — " +
     "find what's interesting, raise a new technical angle, don't just agree.\n\n" +
     `Brainstorm topic: ${args.prompt}\n\n` +
@@ -1911,8 +1918,7 @@ export async function run(args: RunArgs): Promise<Transcript> {
     maxRounds: args.maxRounds,
     model: "MiniMax-M2.7-highspeed",
     turns,
-    synthesisHint:
-      "The synthesis MUST contain ideas neither role had alone. " +
+    synthesisHint: "The synthesis MUST contain ideas neither role had alone. " +
       "Look across turns for emergent positioning.",
   };
 }
@@ -1971,8 +1977,7 @@ export function criticTurnToDict(ct: CriticTurn): DialogueTurn {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/dialogue.test.ts`
-Expected: PASS, 17/17.
+Run: `deno test tests/brainstorm/dialogue.test.ts` Expected: PASS, 17/17.
 
 - [ ] **Step 5: Commit**
 
@@ -1986,10 +1991,12 @@ git commit -m "feat: integrate critic into dialogue.run"
 ## Task 11: Port `cli.ts` argument parsing
 
 **Files:**
+
 - Create: `src/brainstorm/cli.ts`
 - Create: `tests/brainstorm/cli.test.ts`
 
-Argument parsing with `@std/cli`. All flags from Python preserved; adds `--argdown-mode={deno|lightweight}` (default `deno`).
+Argument parsing with `@std/cli`. All flags from Python preserved; adds
+`--argdown-mode={deno|lightweight}` (default `deno`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2049,8 +2056,12 @@ Deno.test("parseArgs: --critic-temperature out of range rejected", () => {
   assertThrows(
     () =>
       parseArgs([
-        "--prompt", "p", "--claude-thoughts", "t",
-        "--critic-temperature", "1.5",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "t",
+        "--critic-temperature",
+        "1.5",
       ]),
     Error,
     "critic_temperature",
@@ -2061,8 +2072,12 @@ Deno.test("parseArgs: --argdown-mode rejected for unknown value", () => {
   assertThrows(
     () =>
       parseArgs([
-        "--prompt", "p", "--claude-thoughts", "t",
-        "--argdown-mode", "frobnicate",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "t",
+        "--argdown-mode",
+        "frobnicate",
       ]),
     Error,
     "argdown-mode",
@@ -2071,8 +2086,12 @@ Deno.test("parseArgs: --argdown-mode rejected for unknown value", () => {
 
 Deno.test("parseArgs: --argdown-mode=lightweight accepted", () => {
   const a = parseArgs([
-    "--prompt", "p", "--claude-thoughts", "t",
-    "--argdown-mode", "lightweight",
+    "--prompt",
+    "p",
+    "--claude-thoughts",
+    "t",
+    "--argdown-mode",
+    "lightweight",
   ]);
   assertEquals(a.argdownMode, "lightweight");
 });
@@ -2096,8 +2115,7 @@ Deno.test("parseArgs: missing --claude-thoughts rejected", () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/cli.test.ts`
-Expected: FAIL — module missing.
+Run: `deno test tests/brainstorm/cli.test.ts` Expected: FAIL — module missing.
 
 - [ ] **Step 3: Implement `parseArgs`**
 
@@ -2121,8 +2139,7 @@ export interface CliArgs {
 function defaultOutputPath(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  const ts =
-    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+  const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
     `T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   return `./.brainstorm/brainstorm-${ts}.json`;
 }
@@ -2182,8 +2199,7 @@ export function parseArgs(argv: string[]): CliArgs {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/cli.test.ts`
-Expected: PASS, 11/11.
+Run: `deno test tests/brainstorm/cli.test.ts` Expected: PASS, 11/11.
 
 - [ ] **Step 5: Commit**
 
@@ -2197,10 +2213,13 @@ git commit -m "port: cli parseArgs with --argdown-mode flag"
 ## Task 12: CLI `main()` with critic wiring + critique-aggregate
 
 **Files:**
+
 - Modify: `src/brainstorm/cli.ts`
 - Modify: `tests/brainstorm/cli.test.ts`
 
-Wire `parseArgs` to `dialogue.run`. Build the production `TurnGenerator` from the Anthropic SDK. On `--critique`, also build an argdown client (Deno or Lightweight). Compute `critiqueAggregate` for critique mode. Write transcript to file.
+Wire `parseArgs` to `dialogue.run`. Build the production `TurnGenerator` from the Anthropic SDK. On
+`--critique`, also build an argdown client (Deno or Lightweight). Compute `critiqueAggregate` for
+critique mode. Write transcript to file.
 
 - [ ] **Step 1: Append failing tests**
 
@@ -2212,7 +2231,9 @@ import { main } from "../../src/brainstorm/cli.ts";
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await Deno.makeTempDir({ prefix: "m2-brainstorm-test-" });
-  try { await fn(dir); } finally {
+  try {
+    await fn(dir);
+  } finally {
     await Deno.remove(dir, { recursive: true });
   }
 }
@@ -2249,9 +2270,17 @@ Deno.test("main: --critique adds critique_aggregate with rounds_critiqued", asyn
     });
     const exit = await main(
       [
-        "--prompt", "p", "--claude-thoughts", "s",
-        "--max-rounds", "1", "--output", out, "--critique",
-        "--argdown-mode", "lightweight",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "s",
+        "--max-rounds",
+        "1",
+        "--output",
+        out,
+        "--critique",
+        "--argdown-mode",
+        "lightweight",
       ],
       {
         generatorFactory: () => () => Promise.resolve("ptext"),
@@ -2271,9 +2300,17 @@ Deno.test("main: --critique with broken critic produces unavailable rounds", asy
     const out = join(dir, "t.json");
     const exit = await main(
       [
-        "--prompt", "p", "--claude-thoughts", "s",
-        "--max-rounds", "1", "--output", out, "--critique",
-        "--argdown-mode", "lightweight",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "s",
+        "--max-rounds",
+        "1",
+        "--output",
+        out,
+        "--critique",
+        "--argdown-mode",
+        "lightweight",
       ],
       {
         generatorFactory: () => () => Promise.resolve("ptext"),
@@ -2312,8 +2349,7 @@ Deno.test("main: missing required flag returns exit code 2", async () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `deno test tests/brainstorm/cli.test.ts`
-Expected: FAIL — `main` not exported.
+Run: `deno test tests/brainstorm/cli.test.ts` Expected: FAIL — `main` not exported.
 
 - [ ] **Step 3: Add `main` and production generator factory**
 
@@ -2322,11 +2358,7 @@ Append to `src/brainstorm/cli.ts`:
 ```typescript
 import Anthropic from "npm:@anthropic-ai/sdk@^0.74";
 import { dirname } from "jsr:@std/path@^1.0";
-import {
-  type DialogueTurn,
-  run,
-  type TurnGenerator,
-} from "./dialogue.ts";
+import { type DialogueTurn, run, type TurnGenerator } from "./dialogue.ts";
 import {
   type ArgdownClient,
   DenoArgdownClient,
@@ -2360,9 +2392,7 @@ function buildProductionGenerator(): TurnGenerator {
 }
 
 function buildArgdownClient(mode: ArgdownMode): ArgdownClient {
-  return mode === "deno"
-    ? new DenoArgdownClient()
-    : new LightweightArgdownClient();
+  return mode === "deno" ? new DenoArgdownClient() : new LightweightArgdownClient();
 }
 
 function computeCritiqueAggregate(turns: DialogueTurn[]): unknown {
@@ -2435,8 +2465,8 @@ export async function main(
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `deno test tests/brainstorm/cli.test.ts --allow-write --allow-read --allow-env`
-Expected: PASS, 16/16.
+Run: `deno test tests/brainstorm/cli.test.ts --allow-write --allow-read --allow-env` Expected: PASS,
+16/16.
 
 - [ ] **Step 5: Commit**
 
@@ -2450,6 +2480,7 @@ git commit -m "feat: cli main with critic wiring and critique_aggregate"
 ## Task 13: `brainstorm.ts` entry point
 
 **Files:**
+
 - Create: `brainstorm.ts`
 
 Thin executable that calls `main()` with `Deno.args` and exits.
@@ -2469,18 +2500,17 @@ if (import.meta.main) {
 
 - [ ] **Step 2: Smoke test the entry with `--help`-like failure path**
 
-Run: `deno run --allow-net --allow-env --allow-read --allow-write --allow-run brainstorm.ts 2>&1 || true`
+Run:
+`deno run --allow-net --allow-env --allow-read --allow-write --allow-run brainstorm.ts 2>&1 || true`
 Expected: stderr message about `--prompt is required`; exit code 2.
 
 - [ ] **Step 3: Smoke-test compile**
 
-Run: `deno task compile:brainstorm`
-Expected: produces `dist/m2-brainstorm` binary, no error.
+Run: `deno task compile:brainstorm` Expected: produces `dist/m2-brainstorm` binary, no error.
 
 - [ ] **Step 4: Verify the compiled binary fails the same way**
 
-Run: `./dist/m2-brainstorm 2>&1 || true`
-Expected: same stderr + exit 2.
+Run: `./dist/m2-brainstorm 2>&1 || true` Expected: same stderr + exit 2.
 
 - [ ] **Step 5: Commit**
 
@@ -2494,14 +2524,17 @@ git commit -m "feat: brainstorm.ts entry point + compile target"
 ## Task 14: Port `exa_tool.ts`
 
 **Files:**
+
 - Create: `src/tools/exa_tool.ts`
 - Create: `tests/research/exa_tool.test.ts`
 
-Port the Exa API wrapper. `httpx.Client` → `fetch`. Error shape `{ error, status: "failed", results: [] }` preserved verbatim.
+Port the Exa API wrapper. `httpx.Client` → `fetch`. Error shape
+`{ error, status: "failed", results: [] }` preserved verbatim.
 
 - [ ] **Step 1: Read Python source for reference**
 
-Read `src/tools/exa_tool.py` so the TS port matches its public API (`search`, `findSimilar`, `getContents`, `formatResults`).
+Read `src/tools/exa_tool.py` so the TS port matches its public API (`search`, `findSimilar`,
+`getContents`, `formatResults`).
 
 - [ ] **Step 2: Write failing tests**
 
@@ -2558,8 +2591,7 @@ Deno.test("ExaTool.formatResults: skips error-shaped entries", () => {
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `deno test tests/research/exa_tool.test.ts`
-Expected: FAIL — module missing.
+Run: `deno test tests/research/exa_tool.test.ts` Expected: FAIL — module missing.
 
 - [ ] **Step 4: Implement `ExaTool`**
 
@@ -2688,8 +2720,7 @@ export class ExaTool {
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `deno test tests/research/exa_tool.test.ts`
-Expected: PASS, 3/3.
+Run: `deno test tests/research/exa_tool.test.ts` Expected: PASS, 3/3.
 
 - [ ] **Step 6: Commit**
 
@@ -2703,6 +2734,7 @@ git commit -m "port: ExaTool with fetch-based HTTP and stable error shape"
 ## Task 15: Port `planning_agent.ts`
 
 **Files:**
+
 - Create: `src/agents/planning_agent.ts`
 - Create: `tests/research/planning_agent.test.ts`
 
@@ -2710,13 +2742,14 @@ JSON-emitting planning agent. Tests cover happy parse, fence-stripping, malforme
 
 - [ ] **Step 1: Read Python source for reference**
 
-Read `src/agents/planning_agent.py` to anchor public API: `plan(query)` returns `{ subqueries: [...] }` parsed from MiniMax output.
+Read `src/agents/planning_agent.py` to anchor public API: `plan(query)` returns
+`{ subqueries: [...] }` parsed from MiniMax output.
 
 - [ ] **Step 2: Write failing tests**
 
 Create `tests/research/planning_agent.test.ts`:
 
-```typescript
+````typescript
 import { assert, assertEquals } from "jsr:@std/assert";
 import { PlanningAgent } from "../../src/agents/planning_agent.ts";
 
@@ -2780,18 +2813,17 @@ Deno.test("plan: empty response returns fallback", async () => {
   const r = await a.plan("orig");
   assertEquals(r.subqueries?.length, 1);
 });
-```
+````
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `deno test tests/research/planning_agent.test.ts`
-Expected: FAIL — module missing.
+Run: `deno test tests/research/planning_agent.test.ts` Expected: FAIL — module missing.
 
 - [ ] **Step 4: Implement `PlanningAgent`**
 
 Create `src/agents/planning_agent.ts`:
 
-```typescript
+````typescript
 export interface SubQuery {
   query: string;
   type?: "auto" | "news" | "research" | "company" | "github";
@@ -2814,7 +2846,8 @@ export interface MinimalAnthropicSDK {
   };
 }
 
-const PLANNING_SYSTEM_PROMPT = `You decompose a research query into 3-5 targeted subqueries optimized
+const PLANNING_SYSTEM_PROMPT =
+  `You decompose a research query into 3-5 targeted subqueries optimized
 for neural web search. Each subquery should focus on a distinct aspect.
 
 Respond with ONLY a JSON object matching:
@@ -2872,12 +2905,11 @@ export class PlanningAgent {
     }
   }
 }
-```
+````
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `deno test tests/research/planning_agent.test.ts`
-Expected: PASS, 5/5.
+Run: `deno test tests/research/planning_agent.test.ts` Expected: PASS, 5/5.
 
 - [ ] **Step 6: Commit**
 
@@ -2891,14 +2923,17 @@ git commit -m "port: PlanningAgent with fallback on parse/API failure"
 ## Task 16: Port `web_search_retriever.ts`
 
 **Files:**
+
 - Create: `src/agents/web_search_retriever.ts`
 - Create: `tests/research/web_search_retriever.test.ts`
 
-Search-orchestration agent. Maps time-period filters to ISO dates, triggers `findSimilar` for priority-1 results, aggregates formatted output.
+Search-orchestration agent. Maps time-period filters to ISO dates, triggers `findSimilar` for
+priority-1 results, aggregates formatted output.
 
 - [ ] **Step 1: Read Python source for reference**
 
-Read `src/agents/web_search_retriever.py` to anchor: `searchWithSubqueries(subqueries)` returns aggregated text.
+Read `src/agents/web_search_retriever.py` to anchor: `searchWithSubqueries(subqueries)` returns
+aggregated text.
 
 - [ ] **Step 2: Write failing tests**
 
@@ -2906,10 +2941,7 @@ Create `tests/research/web_search_retriever.test.ts`:
 
 ```typescript
 import { assert, assertEquals } from "jsr:@std/assert";
-import {
-  type ExaResponse,
-  ExaTool,
-} from "../../src/tools/exa_tool.ts";
+import { type ExaResponse, ExaTool } from "../../src/tools/exa_tool.ts";
 import { WebSearchRetriever } from "../../src/agents/web_search_retriever.ts";
 
 class FakeExa extends ExaTool {
@@ -2961,8 +2993,7 @@ Deno.test("searchWithSubqueries: aggregates result text", async () => {
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `deno test tests/research/web_search_retriever.test.ts`
-Expected: FAIL — module missing.
+Run: `deno test tests/research/web_search_retriever.test.ts` Expected: FAIL — module missing.
 
 - [ ] **Step 4: Implement `WebSearchRetriever`**
 
@@ -3006,8 +3037,7 @@ export class WebSearchRetriever {
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `deno test tests/research/web_search_retriever.test.ts`
-Expected: PASS, 3/3.
+Run: `deno test tests/research/web_search_retriever.test.ts` Expected: PASS, 3/3.
 
 - [ ] **Step 6: Commit**
 
@@ -3021,14 +3051,18 @@ git commit -m "port: WebSearchRetriever (search + findSimilar aggregation)"
 ## Task 17: Port `supervisor.ts`
 
 **Files:**
+
 - Create: `src/agents/supervisor.ts`
 - Create: `tests/research/supervisor.test.ts`
 
-Supervisor agent with interleaved-thinking content-block preservation. Tool dispatch via fake tool, max-iterations termination.
+Supervisor agent with interleaved-thinking content-block preservation. Tool dispatch via fake tool,
+max-iterations termination.
 
 - [ ] **Step 1: Read Python source for reference**
 
-Read `src/agents/supervisor.py`. Anchor on: streaming, `messages.append({role:"assistant", content: response.content})` preserving thinking blocks, `executeTool` dispatch, max-iterations loop bound.
+Read `src/agents/supervisor.py`. Anchor on: streaming,
+`messages.append({role:"assistant", content: response.content})` preserving thinking blocks,
+`executeTool` dispatch, max-iterations loop bound.
 
 - [ ] **Step 2: Write failing tests**
 
@@ -3053,7 +3087,11 @@ function fakeSDK(turns: Block[][]): unknown {
           async *[Symbol.asyncIterator]() {
             for (const _b of blocks) yield { type: "content_block_start" };
           },
-          finalMessage: () => Promise.resolve({ content: blocks, stop_reason: blocks.some(b => b.type === "tool_use") ? "tool_use" : "end_turn" }),
+          finalMessage: () =>
+            Promise.resolve({
+              content: blocks,
+              stop_reason: blocks.some((b) => b.type === "tool_use") ? "tool_use" : "end_turn",
+            }),
         };
       },
     },
@@ -3161,8 +3199,7 @@ Deno.test("supervisor: empty content yields empty text", async () => {
 
 - [ ] **Step 3: Run tests to verify they fail**
 
-Run: `deno test tests/research/supervisor.test.ts`
-Expected: FAIL — module missing.
+Run: `deno test tests/research/supervisor.test.ts` Expected: FAIL — module missing.
 
 - [ ] **Step 4: Implement `Supervisor`**
 
@@ -3259,8 +3296,7 @@ export class Supervisor {
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `deno test tests/research/supervisor.test.ts`
-Expected: PASS, 5/5.
+Run: `deno test tests/research/supervisor.test.ts` Expected: PASS, 5/5.
 
 - [ ] **Step 6: Commit**
 
@@ -3274,13 +3310,15 @@ git commit -m "port: Supervisor with content-block preservation"
 ## Task 18: `research.ts` entry point
 
 **Files:**
+
 - Create: `research.ts`
 
 Thin CLI for the research agent: `-q QUERY`, `-s` (save), `-v` (verbose). Mirrors `main.py`.
 
 - [ ] **Step 1: Read Python source for reference**
 
-Read `main.py` to anchor: interactive vs single-query mode, `-q/-s/-v` flags, `reports/` save path, output format.
+Read `main.py` to anchor: interactive vs single-query mode, `-q/-s/-v` flags, `reports/` save path,
+output format.
 
 - [ ] **Step 2: Create the entry**
 
@@ -3300,7 +3338,9 @@ async function runQuery(
   query: string,
   opts: { save: boolean; verbose: boolean },
 ): Promise<void> {
-  try { Config.validate(); } catch (e) {
+  try {
+    Config.validate();
+  } catch (e) {
     console.error(`Configuration Error: ${e instanceof Error ? e.message : e}`);
     Deno.exit(1);
   }
@@ -3323,8 +3363,7 @@ async function runQuery(
   const supervisor = new Supervisor({
     client,
     model: Config.MINIMAX_MODEL,
-    systemPrompt:
-      "You are a research supervisor synthesizing a comprehensive report " +
+    systemPrompt: "You are a research supervisor synthesizing a comprehensive report " +
       "from web-search findings. Cite sources, include a table of contents, " +
       "executive summary, and detailed analysis.",
     tools,
@@ -3332,8 +3371,7 @@ async function runQuery(
     maxIterations: 5,
   });
 
-  const userMsg =
-    `Research query: ${query}\n\nFindings from web search:\n\n${searchText}\n\n` +
+  const userMsg = `Research query: ${query}\n\nFindings from web search:\n\n${searchText}\n\n` +
     "Synthesize the final research report.";
   const result = await supervisor.run(userMsg);
 
@@ -3381,8 +3419,7 @@ if (import.meta.main) {
 
 - [ ] **Step 3: Smoke-test compile (no live API call)**
 
-Run: `deno task compile:research`
-Expected: produces `dist/m2-research` binary, no error.
+Run: `deno task compile:research` Expected: produces `dist/m2-research` binary, no error.
 
 - [ ] **Step 4: Commit**
 
@@ -3396,6 +3433,7 @@ git commit -m "port: research.ts entry point"
 ## Task 19: GitHub Actions release workflow
 
 **Files:**
+
 - Create: `.github/workflows/release.yml`
 
 Tag-triggered matrix compile for 5 targets + source tarball.
@@ -3408,18 +3446,18 @@ Create `.github/workflows/release.yml`:
 name: Release
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
-          - { triple: x86_64-unknown-linux-gnu,   runner: ubuntu-latest,  ext: "" }
-          - { triple: aarch64-unknown-linux-gnu,  runner: ubuntu-latest,  ext: "" }
-          - { triple: x86_64-pc-windows-msvc,     runner: windows-latest, ext: ".exe" }
-          - { triple: x86_64-apple-darwin,        runner: macos-13,       ext: "" }
-          - { triple: aarch64-apple-darwin,       runner: macos-14,       ext: "" }
+          - { triple: x86_64-unknown-linux-gnu, runner: ubuntu-latest, ext: "" }
+          - { triple: aarch64-unknown-linux-gnu, runner: ubuntu-latest, ext: "" }
+          - { triple: x86_64-pc-windows-msvc, runner: windows-latest, ext: ".exe" }
+          - { triple: x86_64-apple-darwin, runner: macos-13, ext: "" }
+          - { triple: aarch64-apple-darwin, runner: macos-14, ext: "" }
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v1
@@ -3455,7 +3493,8 @@ jobs:
 
 - [ ] **Step 2: Validate YAML**
 
-Run: `deno run --allow-read npm:yaml-lint .github/workflows/release.yml 2>/dev/null || python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/release.yml'))" && echo OK`
+Run:
+`deno run --allow-read npm:yaml-lint .github/workflows/release.yml 2>/dev/null || python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/release.yml'))" && echo OK`
 Expected: `OK` (no parse error).
 
 - [ ] **Step 3: Commit**
@@ -3470,9 +3509,11 @@ git commit -m "ci: release workflow (5-target compile matrix + source tarball)"
 ## Task 20: Plugin install script (`install.sh`)
 
 **Files:**
+
 - Create: `.claude/plugins/m2-brainstorm/install.sh`
 
-POSIX install script. Auto-detects platform; downloads matching binary OR falls back to `deno run` wrapper.
+POSIX install script. Auto-detects platform; downloads matching binary OR falls back to `deno run`
+wrapper.
 
 - [ ] **Step 1: Create the script**
 
@@ -3540,8 +3581,8 @@ fi
 
 - [ ] **Step 2: Lint the script**
 
-Run: `shellcheck .claude/plugins/m2-brainstorm/install.sh || true`
-Expected: no errors (warnings about heredoc escape patterns are acceptable).
+Run: `shellcheck .claude/plugins/m2-brainstorm/install.sh || true` Expected: no errors (warnings
+about heredoc escape patterns are acceptable).
 
 - [ ] **Step 3: Commit**
 
@@ -3556,9 +3597,11 @@ git commit -m "plugin: POSIX install.sh with binary + deno-run fallback"
 ## Task 21: Plugin install script (`install.ps1`)
 
 **Files:**
+
 - Create: `.claude/plugins/m2-brainstorm/install.ps1`
 
-Windows PowerShell sibling of `install.sh`. Pre-compiled binaries cover all five targets — the deno-run fallback path is included for completeness.
+Windows PowerShell sibling of `install.sh`. Pre-compiled binaries cover all five targets — the
+deno-run fallback path is included for completeness.
 
 - [ ] **Step 1: Create the script**
 
@@ -3626,10 +3669,12 @@ git commit -m "plugin: Windows install.ps1"
 ## Task 22: Update plugin skill invocations
 
 **Files:**
+
 - Modify: `.claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md`
 - Modify: `.claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md`
 
-Replace `uv run python brainstorm.py ...` with the installed binary path. Drop the "cwd must be the repo" requirement.
+Replace `uv run python brainstorm.py ...` with the installed binary path. Drop the "cwd must be the
+repo" requirement.
 
 - [ ] **Step 1: Read the current brain-jam SKILL.md**
 
@@ -3637,7 +3682,8 @@ Read `.claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md` to locate the exa
 
 - [ ] **Step 2: Replace the invocation in brain-jam**
 
-In `.claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md`, find the block invoking `uv run python brainstorm.py` and replace it with:
+In `.claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md`, find the block invoking
+`uv run python brainstorm.py` and replace it with:
 
 ```bash
 "$HOME/.config/m2-brainstorm/bin/m2-brainstorm" \
@@ -3651,7 +3697,9 @@ Also remove any line that says "must be invoked from the m2-deep-research repo r
 
 - [ ] **Step 3: Read and update readme-brain-jam SKILL.md**
 
-Read `.claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md`. Apply the same replacement (the `uv run python brainstorm.py ...` block → installed-binary invocation). Update the `--output` path's filename slug to keep `readme-brain-jam` semantics.
+Read `.claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md`. Apply the same replacement
+(the `uv run python brainstorm.py ...` block → installed-binary invocation). Update the `--output`
+path's filename slug to keep `readme-brain-jam` semantics.
 
 - [ ] **Step 4: Commit**
 
@@ -3665,6 +3713,7 @@ git commit -m "plugin: skills invoke installed binary, not uv-run-python"
 ## Task 23: Bump plugin manifests to v0.3.0
 
 **Files:**
+
 - Modify: `.claude-plugin/marketplace.json`
 - Modify: `.claude/plugins/m2-brainstorm/.claude-plugin/plugin.json`
 
@@ -3672,8 +3721,10 @@ git commit -m "plugin: skills invoke installed binary, not uv-run-python"
 
 Edit `.claude-plugin/marketplace.json`. Set:
 
-- `description`: `"TypeScript-native brainstorming dialogue + deep-research CLIs (MiniMax-M2.7-highspeed)"`
-- the plugin's `description`: `"Multi-turn brainstorming dialogue with argdown-backed critic voice (TypeScript port)"`
+- `description`:
+  `"TypeScript-native brainstorming dialogue + deep-research CLIs (MiniMax-M2.7-highspeed)"`
+- the plugin's `description`:
+  `"Multi-turn brainstorming dialogue with argdown-backed critic voice (TypeScript port)"`
 - the plugin's `version`: `"0.3.0"`
 
 - [ ] **Step 2: Update plugin.json**
@@ -3681,7 +3732,8 @@ Edit `.claude-plugin/marketplace.json`. Set:
 Edit `.claude/plugins/m2-brainstorm/.claude-plugin/plugin.json`. Set:
 
 - `version`: `"0.3.0"`
-- `description`: `"Multi-turn brainstorming dialogue with argdown-backed critic voice — TypeScript-native, pre-compiled binaries for Linux/macOS/Windows with deno-run fallback"`
+- `description`:
+  `"Multi-turn brainstorming dialogue with argdown-backed critic voice — TypeScript-native, pre-compiled binaries for Linux/macOS/Windows with deno-run fallback"`
 
 - [ ] **Step 3: Commit**
 
@@ -3695,6 +3747,7 @@ git commit -m "plugin: bump m2-brainstorm to v0.3.0"
 ## Task 24: Big-bang delete Python sources
 
 **Files:**
+
 - Delete: `brainstorm.py`, `main.py`
 - Delete: `src/brainstorm/__init__.py`, `src/brainstorm/*.py`
 - Delete: `src/agents/__init__.py`, `src/agents/*.py`
@@ -3704,12 +3757,13 @@ git commit -m "plugin: bump m2-brainstorm to v0.3.0"
 - Delete: `pyproject.toml`, `uv.lock`, `.python-version`
 - Modify: `.gitignore` (remove Python-specific entries that are no longer needed)
 
-The Python source has been preserved through Tasks 1-23 so both test suites can run side-by-side. Now it goes.
+The Python source has been preserved through Tasks 1-23 so both test suites can run side-by-side.
+Now it goes.
 
 - [ ] **Step 1: Verify Deno test suite passes on its own**
 
-Run: `deno test --allow-net --allow-env --allow-read --allow-write --allow-run`
-Expected: PASS on all ~85 tests.
+Run: `deno test --allow-net --allow-env --allow-read --allow-write --allow-run` Expected: PASS on
+all ~85 tests.
 
 - [ ] **Step 2: Delete Python files**
 
@@ -3727,12 +3781,13 @@ git rm pyproject.toml uv.lock .python-version
 
 - [ ] **Step 3: Update `.gitignore`**
 
-Edit `.gitignore`: remove any lines specific to Python (`__pycache__/`, `.pytest_cache/`, `.venv/`, `*.pyc`) since the project no longer produces Python artifacts.
+Edit `.gitignore`: remove any lines specific to Python (`__pycache__/`, `.pytest_cache/`, `.venv/`,
+`*.pyc`) since the project no longer produces Python artifacts.
 
 - [ ] **Step 4: Verify Deno tests still pass after deletion**
 
-Run: `deno test --allow-net --allow-env --allow-read --allow-write --allow-run`
-Expected: PASS, ~85/85.
+Run: `deno test --allow-net --allow-env --allow-read --allow-write --allow-run` Expected: PASS,
+~85/85.
 
 - [ ] **Step 5: Commit**
 
@@ -3746,30 +3801,37 @@ git commit -m "remove: Python sources, tests, and toolchain (TypeScript replaces
 ## Task 25: Update README + final smoke test
 
 **Files:**
+
 - Modify: `README.md`
 
-Update the README so its setup, usage, and architecture sections reflect Deno/TypeScript. Keep the same positioning ("Brainstorm CLI for Claude Code users") and limitations bullet from the prior README.
+Update the README so its setup, usage, and architecture sections reflect Deno/TypeScript. Keep the
+same positioning ("Brainstorm CLI for Claude Code users") and limitations bullet from the prior
+README.
 
 - [ ] **Step 1: Read current README**
 
-Read `README.md` so the rewrite preserves anchor sections (positioning, limitations, examples) and only updates the runtime-specific parts.
+Read `README.md` so the rewrite preserves anchor sections (positioning, limitations, examples) and
+only updates the runtime-specific parts.
 
 - [ ] **Step 2: Rewrite the runtime-specific sections**
 
 Edit `README.md`:
 
-- Replace any "Python 3.12 + uv" prerequisite line with "Deno 1.x (only for source-fallback installs; pre-compiled binaries have no runtime dependency)".
+- Replace any "Python 3.12 + uv" prerequisite line with "Deno 1.x (only for source-fallback
+  installs; pre-compiled binaries have no runtime dependency)".
 - Replace `uv sync` setup steps with the `install.sh` / `install.ps1` invocation.
 - Replace `uv run python main.py ...` examples with `m2-research ...`.
 - Replace `uv run python brainstorm.py ...` examples with `m2-brainstorm ...`.
-- Update the architecture diagram or table to call out: TypeScript on Deno, `npm:@anthropic-ai/sdk`, `jsr:@argdown/cli` for the critic.
+- Update the architecture diagram or table to call out: TypeScript on Deno, `npm:@anthropic-ai/sdk`,
+  `jsr:@argdown/cli` for the critic.
 - Add a paragraph about pre-compiled binaries vs source-fallback under "Installation".
 
 - [ ] **Step 3: Run final smoke tests (manual)**
 
 Manually verify per the spec's "Migration smoke-test plan":
 
-1. `deno task brainstorm --max-rounds 1 --prompt "..." --claude-thoughts "..."` produces a valid v0.2.0-shape transcript.
+1. `deno task brainstorm --max-rounds 1 --prompt "..." --claude-thoughts "..."` produces a valid
+   v0.2.0-shape transcript.
 2. `deno task brainstorm --critique --max-rounds 1 ...` adds critic turns + `critique_aggregate`.
 3. `deno task research -q "..."` produces a research report.
 4. `deno test` runs all ~85 tests; 2 live tests skipped without `RUN_LIVE_TESTS=1`.
@@ -3793,7 +3855,9 @@ git tag v0.3.0
 
 ## Live tests (gated)
 
-These two tests exist solely as contract tests against the real MiniMax API. They are skipped unless `RUN_LIVE_TESTS=1` is set. Port them as part of the relevant task above (Task 10 for dialogue-live; Task 8 or as a separate test file for critic-live).
+These two tests exist solely as contract tests against the real MiniMax API. They are skipped unless
+`RUN_LIVE_TESTS=1` is set. Port them as part of the relevant task above (Task 10 for dialogue-live;
+Task 8 or as a separate test file for critic-live).
 
 ```typescript
 // tests/brainstorm/dialogue_live.test.ts

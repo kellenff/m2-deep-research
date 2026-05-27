@@ -66,7 +66,8 @@ export interface CriticValidationResult {
   error: string | null;
 }
 
-export const CRITIC_SYSTEM_PROMPT = `You are the critic. You moderate a brainstorming dialogue between two
+export const CRITIC_SYSTEM_PROMPT =
+  `You are the critic. You moderate a brainstorming dialogue between two
 personas: claude (a senior dev) and pragmatist (skeptical of hype). After
 each round, you read the round's turns and produce a structured critique.
 
@@ -210,8 +211,7 @@ export function buildCriticMessages(
   if (opts.lastError) {
     messages.unshift({
       role: "user",
-      content:
-        `Previous output failed validation: ${opts.lastError}. ` +
+      content: `Previous output failed validation: ${opts.lastError}. ` +
         `Re-emit the JSON object matching the schema exactly. ` +
         `No prose, no fences.`,
     });

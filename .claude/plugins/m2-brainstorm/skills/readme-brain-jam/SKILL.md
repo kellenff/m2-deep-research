@@ -5,7 +5,8 @@ description: Use when the user wants README-positioning ideation specifically �
 
 # README Brain-Jam with MiniMax-M2.7-highspeed
 
-A structured dialogue for finding the right *angle* for a README — tone, hook, positioning. Drop-in for the grfp Stage 4 brain-jam pattern.
+A structured dialogue for finding the right _angle_ for a README — tone, hook, positioning. Drop-in
+for the grfp Stage 4 brain-jam pattern.
 
 ## When to use
 
@@ -31,12 +32,15 @@ Look for grfp staging files in the user's current working directory:
 ls .claude/grfp/deep-dive.md .claude/grfp/crystal-ball.md 2>/dev/null
 ```
 
-- **Both present:** Read them. Summarize the deep-dive's tech facts and crystal-ball's roadmap into 3–5 sentences. This becomes the bulk of `--claude-thoughts`.
-- **Missing or partial:** Ask the user inline for 2–3 sentences about what the project does and what makes it noteworthy. Combine with the three Sound-Check answers.
+- **Both present:** Read them. Summarize the deep-dive's tech facts and crystal-ball's roadmap into
+  3–5 sentences. This becomes the bulk of `--claude-thoughts`.
+- **Missing or partial:** Ask the user inline for 2–3 sentences about what the project does and what
+  makes it noteworthy. Combine with the three Sound-Check answers.
 
 ### 3. Build the seed
 
-Compose `--claude-thoughts` as: tech-stack summary + killer feature + pain point + vibe preference. Aim for 4–6 sentences with at least one concrete claim and one tension.
+Compose `--claude-thoughts` as: tech-stack summary + killer feature + pain point + vibe preference.
+Aim for 4–6 sentences with at least one concrete claim and one tension.
 
 ### 4. Run the CLI
 
@@ -57,23 +61,22 @@ Use the Read tool on the output path.
 Present three named angles in this exact format:
 
 ```markdown
-**Option 1: The "Deep Tech" Angle**
-_Headline Idea:_ [Technical & Precise — cite turns it emerged from]
-_Focus:_ Architectural authority, implementation elegance
+**Option 1: The "Deep Tech" Angle** _Headline Idea:_ [Technical & Precise — cite turns it emerged
+from] _Focus:_ Architectural authority, implementation elegance
 
-**Option 2: The "Pragmatic Solver" Angle**
-_Headline Idea:_ [Direct benefit statement — cite turns]
+**Option 2: The "Pragmatic Solver" Angle** _Headline Idea:_ [Direct benefit statement — cite turns]
 _Focus:_ Time-to-Joy, problem solved
 
-**Option 3: The Synthesis (Recommended)**
-_Headline Idea:_ [Hybrid — must emerge from the conversation, not be a mashup]
-_Tone:_ The sweet spot neither role had alone
+**Option 3: The Synthesis (Recommended)** _Headline Idea:_ [Hybrid — must emerge from the
+conversation, not be a mashup] _Tone:_ The sweet spot neither role had alone
 ```
 
-**Quality test:** Option 3 must reference at least one idea that appears in the transcript but is in neither Option 1 nor Option 2. If it's just "Option 1 + Option 2," run another round.
+**Quality test:** Option 3 must reference at least one idea that appears in the transcript but is in
+neither Option 1 nor Option 2. If it's just "Option 1 + Option 2," run another round.
 
 ### 7. Hand off
 
 1. Ask: "Which track feels right? Or should we mix them?"
-2. If grfp staging files were present, save the synthesis to `.claude/grfp/brain-jam.md` and prompt the user for `/claudikins-github-readme-for-perfectionists:pen-wielding`.
+2. If grfp staging files were present, save the synthesis to `.claude/grfp/brain-jam.md` and prompt
+   the user for `/claudikins-github-readme-for-perfectionists:pen-wielding`.
 3. Otherwise ask whether to keep iterating or move on.

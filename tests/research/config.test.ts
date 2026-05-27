@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { makeConfig } from "../../src/utils/config.ts";
 
 Deno.test("makeConfig throws when both keys missing", () => {

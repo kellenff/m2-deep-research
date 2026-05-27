@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 import { PlanningAgent } from "../../src/agents/planning_agent.ts";
 
 interface FakeSDK {

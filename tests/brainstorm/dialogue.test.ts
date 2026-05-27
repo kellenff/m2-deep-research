@@ -1,9 +1,6 @@
-import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import { run, type TurnGenerator } from "../../src/brainstorm/dialogue.ts";
-import {
-  type ArgdownClient,
-  LightweightArgdownClient,
-} from "../../src/brainstorm/argdown_client.ts";
+import { LightweightArgdownClient } from "../../src/brainstorm/argdown_client.ts";
 
 interface Call {
   system: string;
@@ -212,9 +209,15 @@ Deno.test("run: critic mode produces 3N turns in correct order", async () => {
   assertEquals(t.turns.length, 9);
   const speakers = t.turns.map((x) => x.speaker);
   assertEquals(speakers, [
-    "claude", "pragmatist", "critic",
-    "claude", "pragmatist", "critic",
-    "claude", "pragmatist", "critic",
+    "claude",
+    "pragmatist",
+    "critic",
+    "claude",
+    "pragmatist",
+    "critic",
+    "claude",
+    "pragmatist",
+    "critic",
   ]);
 });
 

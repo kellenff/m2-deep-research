@@ -5,10 +5,7 @@ import type {
   DialogueTurn,
   TurnGenerator,
 } from "./critic.ts";
-import {
-  renderAddendum,
-  runCriticStep,
-} from "./critic.ts";
+import { renderAddendum, runCriticStep } from "./critic.ts";
 import type { ArgdownClient } from "./argdown_client.ts";
 
 export type { DialogueTurn, TurnGenerator };
@@ -44,15 +41,13 @@ export async function run(args: RunArgs): Promise<Transcript> {
     throw new Error("argdown_client requires critic_generator (or pass neither)");
   }
 
-  const pragmatistSystem =
-    "You are MiniMax, a pragmatist focused on what devs actually need, " +
+  const pragmatistSystem = "You are MiniMax, a pragmatist focused on what devs actually need, " +
     "skeptical of hype. You're in a brainstorm with Claude, a senior dev " +
     "who appreciates elegant engineering. Push back on shallow excitement. " +
     "Concrete examples only.\n\n" +
     `Brainstorm topic: ${args.prompt}`;
 
-  const claudeSynthSystem =
-    "You are role-playing Claude, a senior dev whose excitement is " +
+  const claudeSynthSystem = "You are role-playing Claude, a senior dev whose excitement is " +
     "technical, not marketing. Build on the pragmatist's last response — " +
     "find what's interesting, raise a new technical angle, don't just agree.\n\n" +
     `Brainstorm topic: ${args.prompt}\n\n` +
@@ -110,8 +105,7 @@ export async function run(args: RunArgs): Promise<Transcript> {
     maxRounds: args.maxRounds,
     model: "MiniMax-M2.7-highspeed",
     turns,
-    synthesisHint:
-      "The synthesis MUST contain ideas neither role had alone. " +
+    synthesisHint: "The synthesis MUST contain ideas neither role had alone. " +
       "Look across turns for emergent positioning.",
   };
 }

@@ -1,18 +1,18 @@
 name: Release
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
-          - { triple: x86_64-unknown-linux-gnu,   runner: ubuntu-latest,  ext: "" }
-          - { triple: aarch64-unknown-linux-gnu,  runner: ubuntu-latest,  ext: "" }
-          - { triple: x86_64-pc-windows-msvc,     runner: windows-latest, ext: ".exe" }
-          - { triple: x86_64-apple-darwin,        runner: macos-13,       ext: "" }
-          - { triple: aarch64-apple-darwin,       runner: macos-14,       ext: "" }
+          - { triple: x86_64-unknown-linux-gnu, runner: ubuntu-latest, ext: "" }
+          - { triple: aarch64-unknown-linux-gnu, runner: ubuntu-latest, ext: "" }
+          - { triple: x86_64-pc-windows-msvc, runner: windows-latest, ext: ".exe" }
+          - { triple: x86_64-apple-darwin, runner: macos-13, ext: "" }
+          - { triple: aarch64-apple-darwin, runner: macos-14, ext: "" }
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2

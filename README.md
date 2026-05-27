@@ -1,10 +1,12 @@
 # MiniMax-M2.7-highspeed Deep Research Agent
 
-A sophisticated research tool powered by **MiniMax-M2.7-highspeed** with interleaved thinking, **Exa** neural search, and multi-agent orchestration.
+A sophisticated research tool powered by **MiniMax-M2.7-highspeed** with interleaved thinking,
+**Exa** neural search, and multi-agent orchestration.
 
 ## Features
 
-- **MiniMax-M2.7-highspeed Supervisor**: Uses interleaved thinking to maintain reasoning state across multi-step research
+- **MiniMax-M2.7-highspeed Supervisor**: Uses interleaved thinking to maintain reasoning state
+  across multi-step research
 - **Intelligent Planning**: Automatically decomposes research queries into optimized subqueries
 - **Neural Web Search**: Leverages Exa API for high-quality, AI-powered web search
 - **Comprehensive Reports**: Generates detailed research reports with citations and analysis
@@ -35,11 +37,11 @@ A sophisticated research tool powered by **MiniMax-M2.7-highspeed** with interle
 
 ### Agent Descriptions
 
-| Agent | Model | Role |
-|-------|-------|------|
-| **Supervisor** | MiniMax-M2.7-highspeed | Coordinates workflow, synthesizes final report |
-| **Planning** | MiniMax-M2.7-highspeed | Generates optimized subqueries |
-| **Web Search** | MiniMax-M2.7-highspeed + Exa | Executes searches, organizes findings |
+| Agent          | Model                        | Role                                           |
+| -------------- | ---------------------------- | ---------------------------------------------- |
+| **Supervisor** | MiniMax-M2.7-highspeed       | Coordinates workflow, synthesizes final report |
+| **Planning**   | MiniMax-M2.7-highspeed       | Generates optimized subqueries                 |
+| **Web Search** | MiniMax-M2.7-highspeed + Exa | Executes searches, organizes findings          |
 
 ---
 
@@ -83,14 +85,18 @@ On Windows:
 powershell -ExecutionPolicy Bypass -File .claude\plugins\m2-brainstorm\install.ps1
 ```
 
-The script downloads pre-compiled binaries for your target triple and installs them to `~/.config/m2-brainstorm/bin/`. If your platform isn't in the matrix, it falls back to a `deno run` wrapper against the bundled source.
+The script downloads pre-compiled binaries for your target triple and installs them to
+`~/.config/m2-brainstorm/bin/`. If your platform isn't in the matrix, it falls back to a `deno run`
+wrapper against the bundled source.
 
 2. **Configure environment variables**:
+
 ```bash
 cp .env.example .env
 ```
 
 Edit `.env` and add your API keys:
+
 ```
 MINIMAX_API_KEY=your_minimax_api_key_here
 EXA_API_KEY=your_exa_api_key_here
@@ -128,20 +134,20 @@ m2-research -q "Climate change solutions" --verbose
 
 ### CLI Options
 
-| Option | Description |
-|--------|-------------|
-| `-q, --query` | Research query (skips interactive mode) |
-| `-s, --save` | Save report to `reports/` folder |
+| Option          | Description                                |
+| --------------- | ------------------------------------------ |
+| `-q, --query`   | Research query (skips interactive mode)    |
+| `-s, --save`    | Save report to `reports/` folder           |
 | `-v, --verbose` | Show detailed progress and thinking blocks |
 
 ### Interactive Commands
 
-| Command | Description |
-|---------|-------------|
-| `/save <query>` | Save the report to a file |
-| `/verbose <query>` | Show detailed progress |
-| `/help` | Show help message |
-| `exit`, `quit`, `q` | Exit the program |
+| Command             | Description               |
+| ------------------- | ------------------------- |
+| `/save <query>`     | Save the report to a file |
+| `/verbose <query>`  | Show detailed progress    |
+| `/help`             | Show help message         |
+| `exit`, `quit`, `q` | Exit the program          |
 
 ---
 
@@ -154,8 +160,8 @@ The **Planning Agent** decomposes your query into 3-5 optimized subqueries:
 ```json
 {
   "subqueries": [
-    {"query": "quantum computing breakthroughs 2025", "type": "news", "priority": 1},
-    {"query": "quantum computing applications cryptography", "type": "auto", "priority": 2}
+    { "query": "quantum computing breakthroughs 2025", "type": "news", "priority": 1 },
+    { "query": "quantum computing applications cryptography", "type": "auto", "priority": 2 }
   ]
 }
 ```
@@ -163,6 +169,7 @@ The **Planning Agent** decomposes your query into 3-5 optimized subqueries:
 ### 2. Web Search
 
 The **Web Search Retriever** executes each subquery using Exa:
+
 - Performs neural search for each subquery
 - Finds similar content for high-priority results
 - Extracts highlights and key information
@@ -170,6 +177,7 @@ The **Web Search Retriever** executes each subquery using Exa:
 ### 3. Synthesis
 
 The **Supervisor Agent** (MiniMax-M2.7-highspeed):
+
 - Maintains reasoning state via interleaved thinking
 - Synthesizes comprehensive report with:
   - Table of contents
@@ -180,7 +188,9 @@ The **Supervisor Agent** (MiniMax-M2.7-highspeed):
 
 ### 4. Interleaved Thinking
 
-The key innovation: the supervisor preserves ALL content blocks (thinking + text + tool_use) in conversation history. This maintains the reasoning chain across multiple turns for more coherent reports.
+The key innovation: the supervisor preserves ALL content blocks (thinking + text + tool_use) in
+conversation history. This maintains the reasoning chain across multiple turns for more coherent
+reports.
 
 ---
 
@@ -214,26 +224,29 @@ m2-deep-research/
 
 ### Getting API Keys
 
-| Service | URL | Purpose |
-|---------|-----|---------|
+| Service | URL                                                | Purpose                              |
+| ------- | -------------------------------------------------- | ------------------------------------ |
 | MiniMax | [platform.minimax.io](https://platform.minimax.io) | All agent reasoning (M2.7-highspeed) |
-| Exa | [exa.ai](https://exa.ai) | Neural web search |
+| Exa     | [exa.ai](https://exa.ai)                           | Neural web search                    |
 
 ---
 
 ## Examples
 
 ### Technology Research
+
 ```bash
 m2-research -q "What are the latest breakthroughs in artificial general intelligence?"
 ```
 
 ### Business Intelligence
+
 ```bash
 m2-research -q "What are the emerging trends in electric vehicle adoption?" --save
 ```
 
 ### Scientific Research
+
 ```bash
 m2-research -q "What are the most promising approaches to carbon capture technology?" --verbose
 ```
@@ -243,15 +256,19 @@ m2-research -q "What are the most promising approaches to carbon capture technol
 ## Customization
 
 ### Adjust Report Style
+
 Edit the supervisor's system prompt in `research.ts`.
 
 ### Modify Search Parameters
+
 Edit `src/agents/web_search_retriever.ts`:
+
 - `numResults`: Results per query (priority-tiered: 20 for priority ≤ 2, else 15)
 - Time-period date filters
 - Content type (`news`, `research`, `auto`, `keyword`)
 
 ### Rebuild from Source
+
 Use the Deno tasks defined in `deno.json`:
 
 ```bash
@@ -264,12 +281,12 @@ deno task compile:research   # Compile the research CLI
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Missing API keys | Ensure `.env` exists and has all keys set |
-| API errors | Verify keys are valid, check rate limits |
-| `command not found` | Add `~/.config/m2-brainstorm/bin` to your `PATH`, or call the binary by its full path |
-| Source-fallback install fails | Ensure [Deno](https://deno.land) 1.x is on `PATH` |
+| Issue                         | Solution                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| Missing API keys              | Ensure `.env` exists and has all keys set                                             |
+| API errors                    | Verify keys are valid, check rate limits                                              |
+| `command not found`           | Add `~/.config/m2-brainstorm/bin` to your `PATH`, or call the binary by its full path |
+| Source-fallback install fails | Ensure [Deno](https://deno.land) 1.x is on `PATH`                                     |
 
 ---
 
@@ -289,6 +306,7 @@ MIT License
 ## Acknowledgments
 
 Built with:
+
 - [MiniMax-M2.7-highspeed](https://www.minimax.io/) - Advanced reasoning model
 - [Exa](https://exa.ai/) - Neural web search
 - [Anthropic TypeScript SDK](https://github.com/anthropics/anthropic-sdk-typescript) - API client

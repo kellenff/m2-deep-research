@@ -1,11 +1,11 @@
 ---
 title: What's the scope of the TypeScript port
 status: accepted
-date: '2026-05-27T00:10:27.078Z'
+date: "2026-05-27T00:10:27.078Z"
 deciders:
   - kellen
 snowball:
-  schema_version: '1.0'
+  schema_version: "1.0"
   source: operator
   confidence: high
   capture_mechanism: ask-user-question
@@ -24,10 +24,16 @@ Question category: Port scope.
 
 ## Considered Options
 
-- **Just m2-brainstorm (recommended)** — Port brainstorm.py + src/brainstorm/* (dialogue engine, CLI, critic, argdown client) including v0.2.0 critic voice. Leave main.py + src/agents/* (deep-research CLI) as Python.
-- **Full repo port (m2-brainstorm + deep-research)** — Port both halves to TypeScript. Removes Python entirely. Bigger scope, bigger payoff (one toolchain).
-- **m2-brainstorm now, deep-research later** — Two-phase. Port brainstorm in this spec; leave deep-research as Python; commit to porting deep-research in a follow-up spec. Same end-state as Option 2 but staged.
+- **Just m2-brainstorm (recommended)** — Port brainstorm.py + src/brainstorm/* (dialogue engine,
+  CLI, critic, argdown client) including v0.2.0 critic voice. Leave main.py + src/agents/*
+  (deep-research CLI) as Python.
+- **Full repo port (m2-brainstorm + deep-research)** — Port both halves to TypeScript. Removes
+  Python entirely. Bigger scope, bigger payoff (one toolchain).
+- **m2-brainstorm now, deep-research later** — Two-phase. Port brainstorm in this spec; leave
+  deep-research as Python; commit to porting deep-research in a follow-up spec. Same end-state as
+  Option 2 but staged.
 
 ## Decision Outcome
 
-Chose **Full repo port (m2-brainstorm + deep-research)**. Port both halves to TypeScript. Removes Python entirely. Bigger scope, bigger payoff (one toolchain).
+Chose **Full repo port (m2-brainstorm + deep-research)**. Port both halves to TypeScript. Removes
+Python entirely. Bigger scope, bigger payoff (one toolchain).

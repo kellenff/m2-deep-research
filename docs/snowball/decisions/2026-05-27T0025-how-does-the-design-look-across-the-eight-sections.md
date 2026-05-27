@@ -1,11 +1,11 @@
 ---
 title: How does the design look across the eight sections
 status: accepted
-date: '2026-05-27T00:25:54.139Z'
+date: "2026-05-27T00:25:54.139Z"
 deciders:
   - kellen
 snowball:
-  schema_version: '1.0'
+  schema_version: "1.0"
   source: operator
   confidence: high
   capture_mechanism: ask-user-question
@@ -24,10 +24,14 @@ Question category: Design review.
 
 ## Considered Options
 
-- **Looks right — write the spec** — Sections 1-8 capture the locked decisions and a coherent design. Write the spec file.
-- **One section needs revision — I'll say which** — Flag a specific section to adjust before the spec is committed. I'll tell you which number + what to change.
-- **Two or more sections need adjustment** — Several sections need rework. I'll walk through them before the spec lands.
+- **Looks right — write the spec** — Sections 1-8 capture the locked decisions and a coherent
+  design. Write the spec file.
+- **One section needs revision — I'll say which** — Flag a specific section to adjust before the
+  spec is committed. I'll tell you which number + what to change.
+- **Two or more sections need adjustment** — Several sections need rework. I'll walk through them
+  before the spec lands.
 
 ## Decision Outcome
 
-Chose **Looks right — write the spec**. Sections 1-8 capture the locked decisions and a coherent design. Write the spec file.
+Chose **Looks right — write the spec**. Sections 1-8 capture the locked decisions and a coherent
+design. Write the spec file.

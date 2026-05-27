@@ -1,9 +1,9 @@
 #!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write --allow-run
-import "jsr:@std/dotenv/load";
-import { parseArgs } from "jsr:@std/cli@^1.0/parse-args";
+import "@std/dotenv/load";
+import { parseArgs } from "@std/cli/parse-args";
 import Anthropic from "npm:@anthropic-ai/sdk@^0.74";
 import { Config } from "./src/utils/config.ts";
-import { PlanningAgent, type MinimalAnthropicSDK } from "./src/agents/planning_agent.ts";
+import { type MinimalAnthropicSDK, PlanningAgent } from "./src/agents/planning_agent.ts";
 import { WebSearchRetriever } from "./src/agents/web_search_retriever.ts";
 import { Supervisor, type SupervisorClientLike, type ToolSpec } from "./src/agents/supervisor.ts";
 import { ExaTool } from "./src/tools/exa_tool.ts";
@@ -42,8 +42,7 @@ async function runQuery(
   const supervisor = new Supervisor({
     client: client as unknown as SupervisorClientLike,
     model: Config.MINIMAX_MODEL,
-    systemPrompt:
-      "You are a research supervisor synthesizing a comprehensive report " +
+    systemPrompt: "You are a research supervisor synthesizing a comprehensive report " +
       "from web-search findings. Cite sources, include a table of contents, " +
       "executive summary, and detailed analysis.",
     tools: _tools,
@@ -51,8 +50,7 @@ async function runQuery(
     maxIterations: 5,
   });
 
-  const userMsg =
-    `Research query: ${query}\n\nFindings from web search:\n\n${findings}\n\n` +
+  const userMsg = `Research query: ${query}\n\nFindings from web search:\n\n${findings}\n\n` +
     "Synthesize the final research report.";
   const result = await supervisor.run(userMsg);
 

@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "jsr:@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { Supervisor, SupervisorClientLike } from "../../src/agents/supervisor.ts";
 
 type Block =
@@ -16,10 +16,11 @@ function fakeSDK(turns: Block[][]): SupervisorClientLike {
           async *[Symbol.asyncIterator]() {
             for (const _b of blocks) yield { type: "content_block_start" };
           },
-          finalMessage: () => Promise.resolve({
-            content: blocks,
-            stop_reason: blocks.some((b) => b.type === "tool_use") ? "tool_use" : "end_turn",
-          }),
+          finalMessage: () =>
+            Promise.resolve({
+              content: blocks,
+              stop_reason: blocks.some((b) => b.type === "tool_use") ? "tool_use" : "end_turn",
+            }),
         };
       },
     },

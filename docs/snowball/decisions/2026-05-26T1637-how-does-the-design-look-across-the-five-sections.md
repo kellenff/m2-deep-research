@@ -1,11 +1,11 @@
 ---
 title: How does the design look across the five sections
 status: accepted
-date: '2026-05-26T16:37:45.441Z'
+date: "2026-05-26T16:37:45.441Z"
 deciders:
   - kellen
 snowball:
-  schema_version: '1.0'
+  schema_version: "1.0"
   source: operator
   confidence: high
   capture_mechanism: ask-user-question
@@ -24,10 +24,14 @@ Question category: Design review.
 
 ## Considered Options
 
-- **Looks right — write the spec to docs/snowball/specs/** — All five sections (modules, schema, loop, error handling, CLI/tests) match the locked decisions. Write the spec file.
-- **One section needs revision — I'll say which** — Flag one section to adjust before the spec is written. I'll tell you which section number and what to change.
-- **Multiple revisions needed — let me walk through them** — Several sections need adjustment. I'll list them and we'll iterate before the spec is committed.
+- **Looks right — write the spec to docs/snowball/specs/** — All five sections (modules, schema,
+  loop, error handling, CLI/tests) match the locked decisions. Write the spec file.
+- **One section needs revision — I'll say which** — Flag one section to adjust before the spec is
+  written. I'll tell you which section number and what to change.
+- **Multiple revisions needed — let me walk through them** — Several sections need adjustment. I'll
+  list them and we'll iterate before the spec is committed.
 
 ## Decision Outcome
 
-Chose **Looks right — write the spec to docs/snowball/specs/**. All five sections (modules, schema, loop, error handling, CLI/tests) match the locked decisions. Write the spec file.
+Chose **Looks right — write the spec to docs/snowball/specs/**. All five sections (modules, schema,
+loop, error handling, CLI/tests) match the locked decisions. Write the spec file.

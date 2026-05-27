@@ -1,11 +1,11 @@
 ---
 title: How should the author field be structured
 status: accepted
-date: '2026-05-26T07:08:06.818Z'
+date: "2026-05-26T07:08:06.818Z"
 deciders:
   - kellen
 snowball:
-  schema_version: '1.0'
+  schema_version: "1.0"
   source: operator
   confidence: high
   capture_mechanism: ask-user-question
@@ -24,10 +24,12 @@ Question category: Author shape.
 
 ## Considered Options
 
-- **Name only** — Minimal: just {"name": "kellenff"}. Keeps contact info out of the published manifest.
+- **Name only** — Minimal: just {"name": "kellenff"}. Keeps contact info out of the published
+  manifest.
 - **Name + email** — Adds kellen@kellenfujimoto.com so marketplace users can reach you.
 - **Name + email + URL** — Full discoverability — add a homepage/GitHub URL too (tell me which).
 
 ## Decision Outcome
 
-Chose **Name only**. Minimal: just {"name": "kellenff"}. Keeps contact info out of the published manifest.
+Chose **Name only**. Minimal: just {"name": "kellenff"}. Keeps contact info out of the published
+manifest.

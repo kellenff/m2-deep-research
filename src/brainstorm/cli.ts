@@ -1,4 +1,4 @@
-import { parseArgs as stdParseArgs } from "jsr:@std/cli@^1.0/parse-args";
+import { parseArgs as stdParseArgs } from "@std/cli/parse-args";
 
 export type ArgdownMode = "deno" | "lightweight";
 
@@ -15,8 +15,7 @@ export interface CliArgs {
 function defaultOutputPath(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  const ts =
-    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+  const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
     `T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   return `./.brainstorm/brainstorm-${ts}.json`;
 }
@@ -74,13 +73,8 @@ export function parseArgs(argv: string[]): CliArgs {
 }
 
 import Anthropic from "npm:@anthropic-ai/sdk@^0.74";
-import { dirname } from "jsr:@std/path@^1.0";
-import {
-  type DialogueTurn,
-  run,
-  transcriptToJson,
-  type TurnGenerator,
-} from "./dialogue.ts";
+import { dirname } from "@std/path";
+import { type DialogueTurn, run, transcriptToJson, type TurnGenerator } from "./dialogue.ts";
 import {
   type ArgdownClient,
   DenoArgdownClient,
@@ -114,9 +108,7 @@ function buildProductionGenerator(): TurnGenerator {
 }
 
 function buildArgdownClient(mode: ArgdownMode): ArgdownClient {
-  return mode === "deno"
-    ? new DenoArgdownClient()
-    : new LightweightArgdownClient();
+  return mode === "deno" ? new DenoArgdownClient() : new LightweightArgdownClient();
 }
 
 function computeCritiqueAggregate(turns: DialogueTurn[]): unknown {

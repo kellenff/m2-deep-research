@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 import { parseArgs } from "../../src/brainstorm/cli.ts";
 
 Deno.test("parseArgs: required flags", () => {
@@ -51,8 +51,12 @@ Deno.test("parseArgs: --critic-temperature out of range rejected", () => {
   assertThrows(
     () =>
       parseArgs([
-        "--prompt", "p", "--claude-thoughts", "t",
-        "--critic-temperature", "1.5",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "t",
+        "--critic-temperature",
+        "1.5",
       ]),
     Error,
     "critic_temperature",
@@ -63,8 +67,12 @@ Deno.test("parseArgs: --argdown-mode rejected for unknown value", () => {
   assertThrows(
     () =>
       parseArgs([
-        "--prompt", "p", "--claude-thoughts", "t",
-        "--argdown-mode", "frobnicate",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "t",
+        "--argdown-mode",
+        "frobnicate",
       ]),
     Error,
     "argdown-mode",
@@ -73,8 +81,12 @@ Deno.test("parseArgs: --argdown-mode rejected for unknown value", () => {
 
 Deno.test("parseArgs: --argdown-mode=lightweight accepted", () => {
   const a = parseArgs([
-    "--prompt", "p", "--claude-thoughts", "t",
-    "--argdown-mode", "lightweight",
+    "--prompt",
+    "p",
+    "--claude-thoughts",
+    "t",
+    "--argdown-mode",
+    "lightweight",
   ]);
   assertEquals(a.argdownMode, "lightweight");
 });
@@ -95,12 +107,14 @@ Deno.test("parseArgs: missing --claude-thoughts rejected", () => {
   );
 });
 
-import { join } from "jsr:@std/path";
+import { join } from "@std/path";
 import { main } from "../../src/brainstorm/cli.ts";
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await Deno.makeTempDir({ prefix: "m2-brainstorm-test-" });
-  try { await fn(dir); } finally {
+  try {
+    await fn(dir);
+  } finally {
     await Deno.remove(dir, { recursive: true });
   }
 }
@@ -137,9 +151,17 @@ Deno.test("main: --critique adds critique_aggregate with rounds_critiqued", asyn
     });
     const exit = await main(
       [
-        "--prompt", "p", "--claude-thoughts", "s",
-        "--max-rounds", "1", "--output", out, "--critique",
-        "--argdown-mode", "lightweight",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "s",
+        "--max-rounds",
+        "1",
+        "--output",
+        out,
+        "--critique",
+        "--argdown-mode",
+        "lightweight",
       ],
       {
         generatorFactory: () => () => Promise.resolve("ptext"),
@@ -159,9 +181,17 @@ Deno.test("main: --critique with broken critic produces unavailable rounds", asy
     const out = join(dir, "t.json");
     const exit = await main(
       [
-        "--prompt", "p", "--claude-thoughts", "s",
-        "--max-rounds", "1", "--output", out, "--critique",
-        "--argdown-mode", "lightweight",
+        "--prompt",
+        "p",
+        "--claude-thoughts",
+        "s",
+        "--max-rounds",
+        "1",
+        "--output",
+        out,
+        "--critique",
+        "--argdown-mode",
+        "lightweight",
       ],
       {
         generatorFactory: () => () => Promise.resolve("ptext"),

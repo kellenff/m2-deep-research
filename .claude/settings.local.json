@@ -27,7 +27,10 @@
       "Bash(git -C /Users/kellen/Projects/m2-deep-research status -sb)",
       "Bash(git -C /Users/kellen/Projects/m2-deep-research log --oneline -3)",
       "Bash(git -C /Users/kellen/Projects/m2-deep-research merge --ff-only worktree-m2-brainstorm-plugin)",
-      "Skill(plugin-dev:plugin-structure)"
+      "Skill(plugin-dev:plugin-structure)",
+      "Bash(deno fmt *)",
+      "Bash(deno lint *)",
+      "Bash(deno test *)"
     ]
   }
 }

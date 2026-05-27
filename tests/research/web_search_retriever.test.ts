@@ -1,8 +1,5 @@
-import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
-import {
-  type ExaResponse,
-  ExaTool,
-} from "../../src/tools/exa_tool.ts";
+import { assert, assertEquals, assertRejects } from "@std/assert";
+import { type ExaResponse, ExaTool } from "../../src/tools/exa_tool.ts";
 import {
   type LlmClientLike,
   type SearchOutput,

@@ -1,12 +1,22 @@
 # m2-brainstorm Plugin Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use snowball:subagent-driven-development (recommended) or snowball:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use snowball:subagent-driven-development
+> (recommended) or snowball:executing-plans to implement this plan task-by-task. Steps use checkbox
+> (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Claude Code plugin (`m2-brainstorm`) with two skills (`brain-jam`, `readme-brain-jam`) that orchestrate multi-turn brainstorming dialogue with MiniMax-M2.7-highspeed via a Python CLI living alongside the existing m2-deep-research package.
+**Goal:** Build a Claude Code plugin (`m2-brainstorm`) with two skills (`brain-jam`,
+`readme-brain-jam`) that orchestrate multi-turn brainstorming dialogue with MiniMax-M2.7-highspeed
+via a Python CLI living alongside the existing m2-deep-research package.
 
-**Architecture:** Pure-Python dialogue engine (`src/brainstorm/dialogue.py`) behind a `TurnGenerator` protocol for testability, wrapped by an argparse CLI (`src/brainstorm/cli.py`) and a thin shim (`brainstorm.py`). Skills (`SKILL.md` markdown files) instruct Claude to shell out to the CLI and read the JSON transcript. Pattern B from the design: `2N-1` real MiniMax calls per N rounds, with MiniMax role-playing both a "pragmatist" and a "claude-synth" voice via separate system prompts and flipped role-mapping.
+**Architecture:** Pure-Python dialogue engine (`src/brainstorm/dialogue.py`) behind a
+`TurnGenerator` protocol for testability, wrapped by an argparse CLI (`src/brainstorm/cli.py`) and a
+thin shim (`brainstorm.py`). Skills (`SKILL.md` markdown files) instruct Claude to shell out to the
+CLI and read the JSON transcript. Pattern B from the design: `2N-1` real MiniMax calls per N rounds,
+with MiniMax role-playing both a "pragmatist" and a "claude-synth" voice via separate system prompts
+and flipped role-mapping.
 
-**Tech Stack:** Python 3.12, `anthropic` SDK (already in deps), argparse (stdlib), `pytest` (new dev dep), `uv` for execution.
+**Tech Stack:** Python 3.12, `anthropic` SDK (already in deps), argparse (stdlib), `pytest` (new dev
+dep), `uv` for execution.
 
 **Spec:** `docs/snowball/specs/2026-05-25-m2-brainstorm-plugin-design.md`
 
@@ -15,6 +25,7 @@
 ## File Map
 
 **Create:**
+
 - `src/brainstorm/__init__.py` — module marker (empty)
 - `src/brainstorm/dialogue.py` — `TurnGenerator` protocol, `run()` function
 - `src/brainstorm/cli.py` — argparse entry, `main()` function, production turn generator wiring
@@ -29,17 +40,26 @@
 - `.claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md` — README-flavored skill
 
 **Modify:**
+
 - `pyproject.toml` — add `pytest` as a dev dependency
 
 ---
 
 ## Critical implementation detail: API message role mapping
 
-The Anthropic API requires the first message to be `user` and roles to alternate. Both speaker callers map the transcript differently:
+The Anthropic API requires the first message to be `user` and roles to alternate. Both speaker
+callers map the transcript differently:
 
-**Pragmatist call:** prior claude turns → `user`, prior pragmatist turns → `assistant`. The seed claude thoughts (round-1 claude turn) is included as the first `user` message. Round 1 messages = `[user: seed]`. Round 2 messages = `[user: seed, assistant: pragmatist_r1, user: claude_synth_r2]`. Always valid.
+**Pragmatist call:** prior claude turns → `user`, prior pragmatist turns → `assistant`. The seed
+claude thoughts (round-1 claude turn) is included as the first `user` message. Round 1 messages =
+`[user: seed]`. Round 2 messages = `[user: seed, assistant: pragmatist_r1, user: claude_synth_r2]`.
+Always valid.
 
-**Claude-synth call:** prior claude turns → `assistant`, prior pragmatist turns → `user`. **The seed claude turn is NOT included in messages** — it goes in the system prompt as context. Otherwise it would land as the first `assistant` message and Anthropic rejects that. Round 2 messages = `[user: pragmatist_r1]`. Round 3 messages = `[user: pragmatist_r1, assistant: claude_synth_r2, user: pragmatist_r2]`.
+**Claude-synth call:** prior claude turns → `assistant`, prior pragmatist turns → `user`. **The seed
+claude turn is NOT included in messages** — it goes in the system prompt as context. Otherwise it
+would land as the first `assistant` message and Anthropic rejects that. Round 2 messages =
+`[user: pragmatist_r1]`. Round 3 messages =
+`[user: pragmatist_r1, assistant: claude_synth_r2, user: pragmatist_r2]`.
 
 System prompts:
 
@@ -66,6 +86,7 @@ CLAUDE_SYNTH_SYSTEM = (
 ## Task 1: Project skeleton + pytest dep
 
 **Files:**
+
 - Create: `src/brainstorm/__init__.py`
 - Create: `tests/__init__.py`
 - Modify: `pyproject.toml`
@@ -79,13 +100,12 @@ touch src/brainstorm/__init__.py tests/__init__.py
 
 - [ ] **Step 2: Add pytest as dev dependency via uv**
 
-Run: `uv add --dev pytest`
-Expected: pytest added to `[dependency-groups.dev]` (or `[tool.uv.dev-dependencies]` depending on uv version) in `pyproject.toml`, and `uv.lock` is updated.
+Run: `uv add --dev pytest` Expected: pytest added to `[dependency-groups.dev]` (or
+`[tool.uv.dev-dependencies]` depending on uv version) in `pyproject.toml`, and `uv.lock` is updated.
 
 - [ ] **Step 3: Verify pytest is installed**
 
-Run: `uv run pytest --version`
-Expected: prints a version like `pytest 8.x.x`.
+Run: `uv run pytest --version` Expected: prints a version like `pytest 8.x.x`.
 
 - [ ] **Step 4: Commit**
 
@@ -99,6 +119,7 @@ git commit -m "Scaffold brainstorm module and add pytest dev dep"
 ## Task 2: Dialogue engine — TurnGenerator protocol and signature
 
 **Files:**
+
 - Create: `src/brainstorm/dialogue.py`
 - Create: `tests/test_dialogue.py`
 
@@ -141,8 +162,8 @@ def test_max_rounds_six_raises():
 
 - [ ] **Step 2: Run tests, verify they fail**
 
-Run: `uv run pytest tests/test_dialogue.py -v`
-Expected: ImportError or ModuleNotFoundError because `src/brainstorm/dialogue.py` does not exist yet.
+Run: `uv run pytest tests/test_dialogue.py -v` Expected: ImportError or ModuleNotFoundError because
+`src/brainstorm/dialogue.py` does not exist yet.
 
 - [ ] **Step 3: Implement minimal dialogue.py**
 
@@ -192,8 +213,7 @@ def run(
 
 - [ ] **Step 4: Run tests, verify they pass**
 
-Run: `uv run pytest tests/test_dialogue.py -v`
-Expected: both tests pass.
+Run: `uv run pytest tests/test_dialogue.py -v` Expected: both tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -207,6 +227,7 @@ git commit -m "Add dialogue engine skeleton with max_rounds validation"
 ## Task 3: Dialogue engine — Round 1 seed handling
 
 **Files:**
+
 - Modify: `src/brainstorm/dialogue.py`
 - Modify: `tests/test_dialogue.py`
 
@@ -240,7 +261,8 @@ def test_round_1_claude_turn_is_verbatim_seed_no_api_call():
 
 - [ ] **Step 2: Run test, verify it fails**
 
-Run: `uv run pytest tests/test_dialogue.py::test_round_1_claude_turn_is_verbatim_seed_no_api_call -v`
+Run:
+`uv run pytest tests/test_dialogue.py::test_round_1_claude_turn_is_verbatim_seed_no_api_call -v`
 Expected: FAIL — `result["turns"]` is currently empty.
 
 - [ ] **Step 3: Implement round-1 seed + pragmatist call**
@@ -283,8 +305,7 @@ Replace the `return` block in `src/brainstorm/dialogue.py` with:
 
 - [ ] **Step 4: Run all dialogue tests**
 
-Run: `uv run pytest tests/test_dialogue.py -v`
-Expected: all 3 tests pass.
+Run: `uv run pytest tests/test_dialogue.py -v` Expected: all 3 tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -298,6 +319,7 @@ git commit -m "Add round-1 seed handling and pragmatist call to dialogue engine"
 ## Task 4: Dialogue engine — Pragmatist temperature and role mapping verification
 
 **Files:**
+
 - Modify: `tests/test_dialogue.py`
 
 - [ ] **Step 1: Add failing tests for pragmatist call shape**
@@ -361,10 +383,11 @@ def test_round_1_pragmatist_messages_have_seed_as_user():
 
 - [ ] **Step 2: Run tests, verify they pass**
 
-Because the Task 3 implementation already set temperature=0.5 and built the right system + messages, these should pass on first run.
+Because the Task 3 implementation already set temperature=0.5 and built the right system + messages,
+these should pass on first run.
 
-Run: `uv run pytest tests/test_dialogue.py -v`
-Expected: all 6 tests pass. If any fail, fix `src/brainstorm/dialogue.py` before continuing — the failing assertion identifies the bug.
+Run: `uv run pytest tests/test_dialogue.py -v` Expected: all 6 tests pass. If any fail, fix
+`src/brainstorm/dialogue.py` before continuing — the failing assertion identifies the bug.
 
 - [ ] **Step 3: Commit**
 
@@ -378,6 +401,7 @@ git commit -m "Lock pragmatist temperature and message shape with tests"
 ## Task 5: Dialogue engine — Claude-synth turn (multi-round expansion)
 
 **Files:**
+
 - Modify: `src/brainstorm/dialogue.py`
 - Modify: `tests/test_dialogue.py`
 
@@ -414,8 +438,8 @@ def test_round_2_produces_claude_synth_turn():
 
 - [ ] **Step 2: Run test, verify it fails**
 
-Run: `uv run pytest tests/test_dialogue.py::test_round_2_produces_claude_synth_turn -v`
-Expected: FAIL — current implementation only handles round 1.
+Run: `uv run pytest tests/test_dialogue.py::test_round_2_produces_claude_synth_turn -v` Expected:
+FAIL — current implementation only handles round 1.
 
 - [ ] **Step 3: Implement multi-round loop**
 
@@ -508,8 +532,7 @@ def _messages_for_claude_synth(turns: list[dict]) -> list[dict]:
 
 - [ ] **Step 4: Run all dialogue tests**
 
-Run: `uv run pytest tests/test_dialogue.py -v`
-Expected: all 7 tests pass.
+Run: `uv run pytest tests/test_dialogue.py -v` Expected: all 7 tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -523,6 +546,7 @@ git commit -m "Add claude-synth turn and multi-round loop to dialogue engine"
 ## Task 6: Dialogue engine — Claude-synth role mapping and temperature
 
 **Files:**
+
 - Modify: `tests/test_dialogue.py`
 
 - [ ] **Step 1: Add failing tests pinning claude-synth call shape**
@@ -619,10 +643,11 @@ def test_pragmatist_messages_alternate_user_assistant_across_rounds():
 
 - [ ] **Step 2: Run tests, verify they pass**
 
-Because Task 5's implementation already produces these shapes, the new tests should pass without further code changes.
+Because Task 5's implementation already produces these shapes, the new tests should pass without
+further code changes.
 
-Run: `uv run pytest tests/test_dialogue.py -v`
-Expected: all 11 tests pass. If any fail, the production code has a subtle bug worth chasing now — fix and re-run.
+Run: `uv run pytest tests/test_dialogue.py -v` Expected: all 11 tests pass. If any fail, the
+production code has a subtle bug worth chasing now — fix and re-run.
 
 - [ ] **Step 3: Commit**
 
@@ -636,6 +661,7 @@ git commit -m "Lock claude-synth temperature, system, and role-mapping with test
 ## Task 7: CLI module
 
 **Files:**
+
 - Create: `src/brainstorm/cli.py`
 - Create: `tests/test_cli.py`
 
@@ -757,8 +783,8 @@ def test_main_returns_exit_code_1_on_api_error(tmp_path):
 
 - [ ] **Step 2: Run tests, verify they fail**
 
-Run: `uv run pytest tests/test_cli.py -v`
-Expected: ImportError because `src/brainstorm/cli.py` does not exist.
+Run: `uv run pytest tests/test_cli.py -v` Expected: ImportError because `src/brainstorm/cli.py` does
+not exist.
 
 - [ ] **Step 3: Implement CLI**
 
@@ -856,8 +882,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run tests, verify they pass**
 
-Run: `uv run pytest tests/test_cli.py -v`
-Expected: all 7 tests pass.
+Run: `uv run pytest tests/test_cli.py -v` Expected: all 7 tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -871,6 +896,7 @@ git commit -m "Add brainstorm CLI with argparse and JSON output"
 ## Task 8: Production turn generator + brainstorm.py shim
 
 **Files:**
+
 - Modify: `src/brainstorm/cli.py`
 - Create: `brainstorm.py`
 
@@ -932,13 +958,11 @@ if __name__ == "__main__":
 
 - [ ] **Step 3: Re-run unit tests to confirm nothing regressed**
 
-Run: `uv run pytest -v`
-Expected: all 18 tests pass (11 dialogue + 7 cli).
+Run: `uv run pytest -v` Expected: all 18 tests pass (11 dialogue + 7 cli).
 
 - [ ] **Step 4: Smoke-test the shim with `--help`**
 
-Run: `uv run python brainstorm.py --help`
-Expected: argparse help text printed, exit 0.
+Run: `uv run python brainstorm.py --help` Expected: argparse help text printed, exit 0.
 
 - [ ] **Step 5: Commit**
 
@@ -952,6 +976,7 @@ git commit -m "Wire production MiniMax TurnGenerator and add brainstorm.py shim"
 ## Task 9: Live contract test (gated)
 
 **Files:**
+
 - Create: `tests/test_dialogue_live.py`
 
 - [ ] **Step 1: Write the contract test**
@@ -1017,13 +1042,15 @@ def test_live_brainstorm_produces_valid_2n_transcript(tmp_path):
 
 - [ ] **Step 2: Verify the test is skipped by default**
 
-Run: `uv run pytest tests/test_dialogue_live.py -v`
-Expected: `1 skipped` (because `RUN_LIVE_TESTS` is not set).
+Run: `uv run pytest tests/test_dialogue_live.py -v` Expected: `1 skipped` (because `RUN_LIVE_TESTS`
+is not set).
 
 - [ ] **Step 3: Run the live test manually to confirm the contract holds**
 
-Run: `RUN_LIVE_TESTS=1 uv run pytest tests/test_dialogue_live.py -v`
-Expected: PASS within ~30 seconds. If FAIL, the failure tells you whether MiniMax's API surface diverges from the test's expectations — fix at the lowest layer that's wrong (likely the production generator or the model ID).
+Run: `RUN_LIVE_TESTS=1 uv run pytest tests/test_dialogue_live.py -v` Expected: PASS within ~30
+seconds. If FAIL, the failure tells you whether MiniMax's API surface diverges from the test's
+expectations — fix at the lowest layer that's wrong (likely the production generator or the model
+ID).
 
 - [ ] **Step 4: Commit**
 
@@ -1037,6 +1064,7 @@ git commit -m "Add gated live contract test for brainstorm CLI"
 ## Task 10: Plugin manifest + general brain-jam skill
 
 **Files:**
+
 - Create: `.claude/plugins/m2-brainstorm/.claude-plugin/plugin.json`
 - Create: `.claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md`
 
@@ -1057,7 +1085,7 @@ Create `.claude/plugins/m2-brainstorm/.claude-plugin/plugin.json`:
 
 Create `.claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md`:
 
-```markdown
+````markdown
 ---
 name: brain-jam
 description: Use when the user explicitly asks for a multi-turn dialogue with MiniMax as a brainstorming partner — phrases like "brain-jam with M2", "talk this through with MiniMax", "get a second perspective from M2". NOT for self-driven design exploration (that belongs to snowball:brainstorming).
@@ -1065,7 +1093,10 @@ description: Use when the user explicitly asks for a multi-turn dialogue with Mi
 
 # Brain-Jam with MiniMax-M2.7-highspeed
 
-A structured multi-perspective dialogue that surfaces ideas neither you nor MiniMax would produce alone. MiniMax plays a *pragmatist* skeptical of hype; a separate prompt has it role-play a *claude-synth* technical-enthusiast voice. Across 3 rounds (default) you get 6 turns of structured back-and-forth, saved as JSON.
+A structured multi-perspective dialogue that surfaces ideas neither you nor MiniMax would produce
+alone. MiniMax plays a _pragmatist_ skeptical of hype; a separate prompt has it role-play a
+_claude-synth_ technical-enthusiast voice. Across 3 rounds (default) you get 6 turns of structured
+back-and-forth, saved as JSON.
 
 ## When to use
 
@@ -1084,19 +1115,24 @@ A structured multi-perspective dialogue that surfaces ideas neither you nor Mini
 ### 1. Sound check (1–3 questions, one at a time)
 
 Establish what's being brain-jammed. Useful questions:
+
 - "What's the problem you're working on?"
 - "What's a take you've already considered and ruled out?"
 - "What does a good outcome look like — a decision, an angle, or a list of options?"
 
-Stop asking once you have enough to write a one-sentence problem statement plus 2–4 sentences of seed analysis. **Do not** start the dialogue with vague inputs — short, specific seeds produce better dialogues.
+Stop asking once you have enough to write a one-sentence problem statement plus 2–4 sentences of
+seed analysis. **Do not** start the dialogue with vague inputs — short, specific seeds produce
+better dialogues.
 
 ### 2. Write seed thoughts
 
-Compose 2–4 sentences of your own initial analysis. Make a substantive claim and a tension you see. This becomes `--claude-thoughts`.
+Compose 2–4 sentences of your own initial analysis. Make a substantive claim and a tension you see.
+This becomes `--claude-thoughts`.
 
 ### 3. Run the CLI
 
-The user's working directory must contain the m2-deep-research package (this plugin lives inside it). Invoke via Bash:
+The user's working directory must contain the m2-deep-research package (this plugin lives inside
+it). Invoke via Bash:
 
 ```bash
 uv run python brainstorm.py \
@@ -1105,18 +1141,23 @@ uv run python brainstorm.py \
   --max-rounds 3 \
   --output ./.brainstorm/<short-slug>-$(date +%Y%m%dT%H%M%S).json
 ```
+````
 
-The CLI prints the output path on success. Exit code 0 = transcript written. Exit code 1 = API error (read stderr). Exit code 2 = invalid arguments.
+The CLI prints the output path on success. Exit code 0 = transcript written. Exit code 1 = API error
+(read stderr). Exit code 2 = invalid arguments.
 
 ### 4. Read the transcript
 
-Use the Read tool on the output path. The JSON has `turns: [...]` alternating between `speaker: "claude"` and `speaker: "pragmatist"`.
+Use the Read tool on the output path. The JSON has `turns: [...]` alternating between
+`speaker: "claude"` and `speaker: "pragmatist"`.
 
 ### 5. Synthesize 2–3 angles
 
-Present the user with distinct angles that emerged from the dialogue. For each angle, cite which turn(s) it came from.
+Present the user with distinct angles that emerged from the dialogue. For each angle, cite which
+turn(s) it came from.
 
-**Quality test:** The synthesis must contain ideas neither role had alone. If your synthesis is just "Option 1 + Option 2 mashed together," the jam was shallow — run another round:
+**Quality test:** The synthesis must contain ideas neither role had alone. If your synthesis is just
+"Option 1 + Option 2 mashed together," the jam was shallow — run another round:
 
 ```bash
 uv run python brainstorm.py \
@@ -1128,43 +1169,49 @@ uv run python brainstorm.py \
 
 ### 6. Hand off
 
-Ask the user: "Which angle resonates? Want me to draft a design doc, hand this back to `snowball:brainstorming`, or keep digging?"
+Ask the user: "Which angle resonates? Want me to draft a design doc, hand this back to
+`snowball:brainstorming`, or keep digging?"
 
 ## Failure modes to flag
 
-- **Agreement spiral:** If turns 2+ are just "yes, and" with no real pushback, say so to the user and offer to re-run with a sharper seed.
-- **Topic drift:** If the pragmatist turns wander off-prompt, the seed was too abstract — propose tightening before re-running.
-- **Empty turns:** Exit code 0 but turns contain empty strings → file a bug; the production TurnGenerator is dropping content.
-```
+- **Agreement spiral:** If turns 2+ are just "yes, and" with no real pushback, say so to the user
+  and offer to re-run with a sharper seed.
+- **Topic drift:** If the pragmatist turns wander off-prompt, the seed was too abstract — propose
+  tightening before re-running.
+- **Empty turns:** Exit code 0 but turns contain empty strings → file a bug; the production
+  TurnGenerator is dropping content.
 
+```
 - [ ] **Step 3: Verify file structure**
 
 Run: `find .claude/plugins/m2-brainstorm -type f`
 Expected output:
 ```
+
 .claude/plugins/m2-brainstorm/.claude-plugin/plugin.json
 .claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md
-```
 
+````
 - [ ] **Step 4: Commit**
 
 ```bash
 git add .claude/plugins/m2-brainstorm/
 git commit -m "Add m2-brainstorm plugin manifest and brain-jam skill"
-```
+````
 
 ---
 
 ## Task 11: README brain-jam skill
 
 **Files:**
+
 - Create: `.claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md`
 
 - [ ] **Step 1: Create the readme-brain-jam SKILL.md**
 
 Create `.claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md`:
 
-```markdown
+````markdown
 ---
 name: readme-brain-jam
 description: Use when the user wants README-positioning ideation specifically — "brain-jam our README", "what angle should this README take", or explicit invocation of /m2-brainstorm:readme-brain-jam. Drop-in replacement for claudikins-grfp's Stage 4 brain-jam, routed through MiniMax instead of Gemini. Do NOT auto-fire on generic README mentions.
@@ -1172,7 +1219,8 @@ description: Use when the user wants README-positioning ideation specifically �
 
 # README Brain-Jam with MiniMax-M2.7-highspeed
 
-A structured dialogue for finding the right *angle* for a README — tone, hook, positioning. Drop-in for the grfp Stage 4 brain-jam pattern.
+A structured dialogue for finding the right _angle_ for a README — tone, hook, positioning. Drop-in
+for the grfp Stage 4 brain-jam pattern.
 
 ## When to use
 
@@ -1197,13 +1245,17 @@ Look for grfp staging files in the user's current working directory:
 ```bash
 ls .claude/grfp/deep-dive.md .claude/grfp/crystal-ball.md 2>/dev/null
 ```
+````
 
-- **Both present:** Read them. Summarize the deep-dive's tech facts and crystal-ball's roadmap into 3–5 sentences. This becomes the bulk of `--claude-thoughts`.
-- **Missing or partial:** Ask the user inline for 2–3 sentences about what the project does and what makes it noteworthy. Combine with the three Sound-Check answers.
+- **Both present:** Read them. Summarize the deep-dive's tech facts and crystal-ball's roadmap into
+  3–5 sentences. This becomes the bulk of `--claude-thoughts`.
+- **Missing or partial:** Ask the user inline for 2–3 sentences about what the project does and what
+  makes it noteworthy. Combine with the three Sound-Check answers.
 
 ### 3. Build the seed
 
-Compose `--claude-thoughts` as: tech-stack summary + killer feature + pain point + vibe preference. Aim for 4–6 sentences with at least one concrete claim and one tension.
+Compose `--claude-thoughts` as: tech-stack summary + killer feature + pain point + vibe preference.
+Aim for 4–6 sentences with at least one concrete claim and one tension.
 
 ### 4. Run the CLI
 
@@ -1224,49 +1276,50 @@ Use the Read tool on the output path.
 Present three named angles in this exact format:
 
 ```markdown
-**Option 1: The "Deep Tech" Angle**
-_Headline Idea:_ [Technical & Precise — cite turns it emerged from]
-_Focus:_ Architectural authority, implementation elegance
+**Option 1: The "Deep Tech" Angle** _Headline Idea:_ [Technical & Precise — cite turns it emerged
+from] _Focus:_ Architectural authority, implementation elegance
 
-**Option 2: The "Pragmatic Solver" Angle**
-_Headline Idea:_ [Direct benefit statement — cite turns]
+**Option 2: The "Pragmatic Solver" Angle** _Headline Idea:_ [Direct benefit statement — cite turns]
 _Focus:_ Time-to-Joy, problem solved
 
-**Option 3: The Synthesis (Recommended)**
-_Headline Idea:_ [Hybrid — must emerge from the conversation, not be a mashup]
-_Tone:_ The sweet spot neither role had alone
+**Option 3: The Synthesis (Recommended)** _Headline Idea:_ [Hybrid — must emerge from the
+conversation, not be a mashup] _Tone:_ The sweet spot neither role had alone
 ```
 
-**Quality test:** Option 3 must reference at least one idea that appears in the transcript but is in neither Option 1 nor Option 2. If it's just "Option 1 + Option 2," run another round.
+**Quality test:** Option 3 must reference at least one idea that appears in the transcript but is in
+neither Option 1 nor Option 2. If it's just "Option 1 + Option 2," run another round.
 
 ### 7. Hand off
 
 1. Ask: "Which track feels right? Or should we mix them?"
-2. If grfp staging files were present, save the synthesis to `.claude/grfp/brain-jam.md` and prompt the user for `/claudikins-github-readme-for-perfectionists:pen-wielding`.
+2. If grfp staging files were present, save the synthesis to `.claude/grfp/brain-jam.md` and prompt
+   the user for `/claudikins-github-readme-for-perfectionists:pen-wielding`.
 3. Otherwise ask whether to keep iterating or move on.
-```
 
+```
 - [ ] **Step 2: Verify file structure**
 
 Run: `find .claude/plugins/m2-brainstorm/skills -name "SKILL.md"`
 Expected:
 ```
+
 .claude/plugins/m2-brainstorm/skills/brain-jam/SKILL.md
 .claude/plugins/m2-brainstorm/skills/readme-brain-jam/SKILL.md
-```
 
+````
 - [ ] **Step 3: Commit**
 
 ```bash
 git add .claude/plugins/m2-brainstorm/skills/readme-brain-jam/
 git commit -m "Add readme-brain-jam skill as grfp drop-in for README angle ideation"
-```
+````
 
 ---
 
 ## Task 12: Plugin README
 
 **Files:**
+
 - Create: `.claude/plugins/m2-brainstorm/README.md`
 
 - [ ] **Step 1: Write the plugin README**
@@ -1278,7 +1331,9 @@ Create `.claude/plugins/m2-brainstorm/README.md`:
 
 A Claude Code plugin for multi-turn brainstorming dialogue powered by MiniMax-M2.7-highspeed.
 
-Drop-in replacement for the `claudikins-grfp` brain-jam workflow (which uses Gemini via the claudikins-tool-executor MCP). This plugin invokes the m2-deep-research Python package directly via CLI — no MCP execute_code, no TypeScript.
+Drop-in replacement for the `claudikins-grfp` brain-jam workflow (which uses Gemini via the
+claudikins-tool-executor MCP). This plugin invokes the m2-deep-research Python package directly via
+CLI — no MCP execute_code, no TypeScript.
 
 ## Skills
 
@@ -1288,23 +1343,30 @@ Drop-in replacement for the `claudikins-grfp` brain-jam workflow (which uses Gem
 ## How it works
 
 Each skill walks Claude through:
+
 1. A short sound-check with the user (1–3 targeted questions).
 2. Writing seed thoughts.
-3. Running `uv run python brainstorm.py --prompt ... --claude-thoughts ...` from the m2-deep-research repo root.
+3. Running `uv run python brainstorm.py --prompt ... --claude-thoughts ...` from the
+   m2-deep-research repo root.
 4. Reading the JSON transcript and synthesizing 2–3 distinct angles.
 
-Internally, the CLI runs `2N-1` MiniMax calls for N rounds. MiniMax plays two roles via separate system prompts — a *pragmatist* (temperature 0.5) and a *claude-synth* technical-enthusiast (temperature 0.8). The structural multi-perspective dialogue is what produces ideas neither role had alone.
+Internally, the CLI runs `2N-1` MiniMax calls for N rounds. MiniMax plays two roles via separate
+system prompts — a _pragmatist_ (temperature 0.5) and a _claude-synth_ technical-enthusiast
+(temperature 0.8). The structural multi-perspective dialogue is what produces ideas neither role had
+alone.
 
 ## Requirements
 
 The plugin shells out to a Python CLI bundled with [m2-deep-research](../../../). To use:
 
-1. The current working directory must be the m2-deep-research repo (or a workspace where `brainstorm.py` resolves).
+1. The current working directory must be the m2-deep-research repo (or a workspace where
+   `brainstorm.py` resolves).
 2. `MINIMAX_API_KEY` must be set in `.env`.
 
 ## Output
 
-Transcripts are written to `./.brainstorm/<slug>-<timestamp>.json`. Each transcript contains `turns: [...]` with alternating `claude` and `pragmatist` speakers.
+Transcripts are written to `./.brainstorm/<slug>-<timestamp>.json`. Each transcript contains
+`turns: [...]` with alternating `claude` and `pragmatist` speakers.
 
 ## License
 
@@ -1326,12 +1388,12 @@ git commit -m "Add README for m2-brainstorm plugin"
 
 - [ ] **Step 1: Run the full unit test suite**
 
-Run: `uv run pytest -v`
-Expected: 18 passed, 1 skipped (the live test).
+Run: `uv run pytest -v` Expected: 18 passed, 1 skipped (the live test).
 
 - [ ] **Step 2: Manual CLI smoke test with `--max-rounds 1`**
 
 Run:
+
 ```bash
 uv run python brainstorm.py \
   --prompt "Test: should a Python CLI write transcripts to ./.brainstorm or to a tmp dir by default?" \
@@ -1340,17 +1402,21 @@ uv run python brainstorm.py \
   --output /tmp/m2-smoke-1.json
 ```
 
-Expected: exit 0, `/tmp/m2-smoke-1.json` exists, JSON has 2 turns (claude_r1 verbatim seed + pragmatist_r1 generated).
+Expected: exit 0, `/tmp/m2-smoke-1.json` exists, JSON has 2 turns (claude_r1 verbatim seed +
+pragmatist_r1 generated).
 
 Verify:
+
 ```bash
 python3 -c "import json; d=json.load(open('/tmp/m2-smoke-1.json')); assert len(d['turns'])==2; assert d['turns'][0]['speaker']=='claude'; assert d['turns'][0]['text'].startswith('Per-project'); assert d['turns'][1]['speaker']=='pragmatist'; assert d['turns'][1]['text'].strip(); print('smoke 1 OK')"
 ```
+
 Expected: `smoke 1 OK`.
 
 - [ ] **Step 3: Manual CLI smoke test with `--max-rounds 3`**
 
 Run:
+
 ```bash
 uv run python brainstorm.py \
   --prompt "Test: same prompt as smoke 1." \
@@ -1362,6 +1428,7 @@ uv run python brainstorm.py \
 Expected: exit 0, file exists, 6 turns alternating claude/pragmatist across rounds 1–3.
 
 Verify:
+
 ```bash
 python3 -c "
 import json
@@ -1375,21 +1442,26 @@ for t in d['turns']:
 print('smoke 3 OK')
 "
 ```
+
 Expected: `smoke 3 OK`.
 
 - [ ] **Step 4: Plugin discoverability check**
 
 From a Claude Code session launched in this repo, confirm that:
+
 - The plugin appears in `/plugin` listings (if applicable).
-- Typing *"brain-jam with M2 about whether brainstorm transcripts should be gitignored"* triggers the `brain-jam` skill.
+- Typing _"brain-jam with M2 about whether brainstorm transcripts should be gitignored"_ triggers
+  the `brain-jam` skill.
 - Typing `/m2-brainstorm:readme-brain-jam` triggers the README skill.
 
-This is a manual verification — there's no automated assertion. If the skill does not trigger, check:
+This is a manual verification — there's no automated assertion. If the skill does not trigger,
+check:
+
 1. The frontmatter `name:` matches the directory.
 2. The `description:` is specific enough for the matcher (not generic words like "brainstorm").
 3. The plugin.json exists at `.claude-plugin/plugin.json` (note the dot prefix and subdir).
 
 - [ ] **Step 5: Confirm clean working tree**
 
-Run: `git status`
-Expected: clean tree, branch ahead of origin by a number of commits matching the plan's commit count (Tasks 1–12 each produce one commit, so ~12 commits beyond the spec commit).
+Run: `git status` Expected: clean tree, branch ahead of origin by a number of commits matching the
+plan's commit count (Tasks 1–12 each produce one commit, so ~12 commits beyond the spec commit).
