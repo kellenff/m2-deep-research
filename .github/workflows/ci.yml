@@ -1,0 +1,15 @@
+name: CI
+on: [pull_request, push]
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with: { deno-version: v1.x }
+      - run: deno fmt --check
+      - run: deno lint
+      - run: deno test --allow-net --allow-env --allow-read --allow-write --allow-run
