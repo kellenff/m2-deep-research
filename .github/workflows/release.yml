@@ -1,0 +1,45 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - { triple: x86_64-unknown-linux-gnu,   runner: ubuntu-latest,  ext: "" }
+          - { triple: aarch64-unknown-linux-gnu,  runner: ubuntu-latest,  ext: "" }
+          - { triple: x86_64-pc-windows-msvc,     runner: windows-latest, ext: ".exe" }
+          - { triple: x86_64-apple-darwin,        runner: macos-13,       ext: "" }
+          - { triple: aarch64-apple-darwin,       runner: macos-14,       ext: "" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+      - shell: bash
+        run: |
+          deno compile \
+            --target=${{ matrix.triple }} \
+            --allow-net --allow-env --allow-read --allow-write --allow-run \
+            --output=m2-brainstorm-${{ matrix.triple }}${{ matrix.ext }} \
+            brainstorm.ts
+          deno compile \
+            --target=${{ matrix.triple }} \
+            --allow-net --allow-env --allow-read --allow-write --allow-run \
+            --output=m2-research-${{ matrix.triple }}${{ matrix.ext }} \
+            research.ts
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            m2-brainstorm-${{ matrix.triple }}${{ matrix.ext }}
+            m2-research-${{ matrix.triple }}${{ matrix.ext }}
+
+  source:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: tar czf m2-brainstorm-source.tar.gz src/ brainstorm.ts research.ts deno.json deno.lock
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: m2-brainstorm-source.tar.gz
