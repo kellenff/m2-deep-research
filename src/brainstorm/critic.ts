@@ -1,3 +1,5 @@
+import type { ArgdownClient } from "./argdown_client.ts";
+
 export type Speaker = "claude" | "pragmatist";
 
 export interface FactualAssertion {
@@ -293,4 +295,87 @@ export function validateCriticJson(text: string): CriticValidationResult {
   } catch (e) {
     return { payload: null, error: `shape error: ${e}` };
   }
+}
+
+export interface TurnGeneratorArgs {
+  system: string;
+  messages: ApiMessage[];
+  temperature: number;
+}
+
+export type TurnGenerator = (args: TurnGeneratorArgs) => Promise<string> | string;
+
+export interface RunCriticStepArgs {
+  turns: DialogueTurn[];
+  currentRound: number;
+  generator: TurnGenerator;
+  argdownClient: ArgdownClient;
+  criticTemperature: number;
+}
+
+export async function runCriticStep(
+  args: RunCriticStepArgs,
+): Promise<CriticTurn> {
+  const expectedIds = [
+    `claude_r${args.currentRound}`,
+    `pragmatist_r${args.currentRound}`,
+  ];
+  let lastError: string | null = null;
+  let lastText: string | null = null;
+
+  for (let _ = 0; _ < 2; _++) {
+    const messages = buildCriticMessages(args.turns, {
+      currentRound: args.currentRound,
+      lastError: lastError ?? undefined,
+    });
+    const text = await args.generator({
+      system: CRITIC_SYSTEM_PROMPT,
+      messages,
+      temperature: args.criticTemperature,
+    });
+    lastText = text;
+
+    const validation = validateCriticJson(text);
+    if (validation.error) {
+      lastError = validation.error;
+      continue;
+    }
+    const payload = validation.payload!;
+    const argdownCheck = await Promise.resolve(
+      args.argdownClient.parse(payload.argdown),
+    );
+    if (!argdownCheck.ok) {
+      lastError = `argdown.parse failed: ${argdownCheck.error}`;
+      continue;
+    }
+
+    const dung = await Promise.resolve(
+      args.argdownClient.dungExtensions(payload.argdown),
+    );
+    return {
+      round: args.currentRound,
+      speaker: "critic",
+      status: "ok",
+      turnsUnderReview: payload.turnsUnderReview,
+      factualAssertions: payload.factualAssertions,
+      assumptions: payload.assumptions,
+      steelman: payload.steelman,
+      antiSteelman: payload.antiSteelman,
+      argdown: payload.argdown,
+      dungExtension: {
+        in_: dung.in_,
+        out: dung.out,
+        undec: dung.undec,
+      },
+    };
+  }
+
+  return {
+    round: args.currentRound,
+    speaker: "critic",
+    status: "unavailable",
+    turnsUnderReview: expectedIds,
+    error: lastError,
+    rawText: lastText,
+  };
 }

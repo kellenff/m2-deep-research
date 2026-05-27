@@ -1,11 +1,18 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 import {
+  type ArgdownClient,
+  type ArgdownParseResult,
+  type DungExtensionResult,
+} from "../../src/brainstorm/argdown_client.ts";
+import {
   buildCriticMessages,
   CRITIC_SYSTEM_PROMPT,
   type CriticTurnOk,
   type CriticTurnUnavailable,
   DialogueTurn,
   renderAddendum,
+  runCriticStep,
+  type TurnGenerator,
   validateCriticJson,
 } from "../../src/brainstorm/critic.ts";
 
@@ -173,4 +180,91 @@ Deno.test("renderAddendum: omits undefended-assumptions block when speaker has n
   };
   const a = renderAddendum(turn, "claude");
   assert(!a.includes("Undefended assumptions"));
+});
+
+class FakeArgdownOk implements ArgdownClient {
+  parse(): ArgdownParseResult {
+    return { ok: true, error: null };
+  }
+  dungExtensions(): DungExtensionResult {
+    return { in_: ["A"], out: ["B"], undec: [] };
+  }
+}
+
+class FakeArgdownFail implements ArgdownClient {
+  parse(): ArgdownParseResult {
+    return { ok: false, error: "bad argdown" };
+  }
+  dungExtensions(): DungExtensionResult {
+    return { in_: [], out: [], undec: [] };
+  }
+}
+
+function gen(responses: string[]): TurnGenerator {
+  let i = 0;
+  return () => Promise.resolve(responses[i++] ?? "exhausted");
+}
+
+const turnsR1: DialogueTurn[] = [
+  { round: 1, speaker: "claude", text: "seed" },
+  { round: 1, speaker: "pragmatist", text: "skeptical" },
+];
+
+Deno.test("runCriticStep: happy path returns status=ok with dung extension", async () => {
+  const ct = await runCriticStep({
+    turns: turnsR1,
+    currentRound: 1,
+    generator: gen([JSON.stringify(VALID_PAYLOAD)]),
+    argdownClient: new FakeArgdownOk(),
+    criticTemperature: 0.3,
+  });
+  assertEquals(ct.status, "ok");
+  if (ct.status === "ok") {
+    assertEquals(ct.dungExtension.in_, ["A"]);
+    assertEquals(ct.argdown, "[A]: foo");
+  }
+});
+
+Deno.test("runCriticStep: invalid JSON, then valid → status=ok", async () => {
+  const ct = await runCriticStep({
+    turns: turnsR1,
+    currentRound: 1,
+    generator: gen(["not json", JSON.stringify(VALID_PAYLOAD)]),
+    argdownClient: new FakeArgdownOk(),
+    criticTemperature: 0.3,
+  });
+  assertEquals(ct.status, "ok");
+});
+
+Deno.test("runCriticStep: invalid JSON twice → status=unavailable", async () => {
+  const ct = await runCriticStep({
+    turns: turnsR1,
+    currentRound: 1,
+    generator: gen(["nope1", "nope2"]),
+    argdownClient: new FakeArgdownOk(),
+    criticTemperature: 0.3,
+  });
+  assertEquals(ct.status, "unavailable");
+  if (ct.status === "unavailable") {
+    assertEquals(ct.turnsUnderReview, ["claude_r1", "pragmatist_r1"]);
+    assert(ct.error?.includes("invalid JSON"));
+    assertEquals(ct.rawText, "nope2");
+  }
+});
+
+Deno.test("runCriticStep: argdown parse fail twice → status=unavailable", async () => {
+  const ct = await runCriticStep({
+    turns: turnsR1,
+    currentRound: 1,
+    generator: gen([
+      JSON.stringify(VALID_PAYLOAD),
+      JSON.stringify(VALID_PAYLOAD),
+    ]),
+    argdownClient: new FakeArgdownFail(),
+    criticTemperature: 0.3,
+  });
+  assertEquals(ct.status, "unavailable");
+  if (ct.status === "unavailable") {
+    assert(ct.error?.includes("argdown.parse failed"));
+  }
 });
