@@ -1,8 +1,15 @@
 import type {
   ApiMessage,
+  CriticTurn,
+  CriticTurnOk,
   DialogueTurn,
   TurnGenerator,
 } from "./critic.ts";
+import {
+  renderAddendum,
+  runCriticStep,
+} from "./critic.ts";
+import type { ArgdownClient } from "./argdown_client.ts";
 
 export type { DialogueTurn, TurnGenerator };
 
@@ -21,11 +28,20 @@ export interface RunArgs {
   claudeThoughts: string;
   maxRounds: number;
   generator: TurnGenerator;
+  criticGenerator?: TurnGenerator;
+  argdownClient?: ArgdownClient;
+  criticTemperature?: number;
 }
 
 export async function run(args: RunArgs): Promise<Transcript> {
   if (args.maxRounds < 1 || args.maxRounds > 5) {
     throw new Error("max_rounds must be between 1 and 5");
+  }
+  if (args.criticGenerator && !args.argdownClient) {
+    throw new Error("critic_generator requires argdown_client (or pass neither)");
+  }
+  if (args.argdownClient && !args.criticGenerator) {
+    throw new Error("argdown_client requires critic_generator (or pass neither)");
   }
 
   const pragmatistSystem =
@@ -45,12 +61,22 @@ export async function run(args: RunArgs): Promise<Transcript> {
   const turns: DialogueTurn[] = [
     { round: 1, speaker: "claude", text: args.claudeThoughts },
   ];
+  let lastCriticTurn: CriticTurn | null = null;
 
   for (let roundNum = 1; roundNum <= args.maxRounds; roundNum++) {
+    let pragmatistSys = pragmatistSystem;
+    let claudeSys = claudeSynthSystem;
+    if (lastCriticTurn && lastCriticTurn.status === "ok") {
+      pragmatistSys = pragmatistSystem + "\n\n" +
+        renderAddendum(lastCriticTurn, "pragmatist");
+      claudeSys = claudeSynthSystem + "\n\n" +
+        renderAddendum(lastCriticTurn, "claude");
+    }
+
     if (roundNum > 1) {
       const messages = messagesForClaudeSynth(turns);
       const text = await args.generator({
-        system: claudeSynthSystem,
+        system: claudeSys,
         messages,
         temperature: 0.8,
       });
@@ -59,11 +85,23 @@ export async function run(args: RunArgs): Promise<Transcript> {
 
     const pmessages = messagesForPragmatist(turns);
     const ptext = await args.generator({
-      system: pragmatistSystem,
+      system: pragmatistSys,
       messages: pmessages,
       temperature: 0.5,
     });
     turns.push({ round: roundNum, speaker: "pragmatist", text: ptext });
+
+    if (args.criticGenerator && args.argdownClient) {
+      const criticTurn = await runCriticStep({
+        turns,
+        currentRound: roundNum,
+        generator: args.criticGenerator,
+        argdownClient: args.argdownClient,
+        criticTemperature: args.criticTemperature ?? 0.3,
+      });
+      turns.push(criticTurnToDict(criticTurn));
+      lastCriticTurn = criticTurn;
+    }
   }
 
   return {
@@ -97,4 +135,34 @@ export function messagesForClaudeSynth(turns: DialogueTurn[]): ApiMessage[] {
     messages.push({ role, content: String(t.text ?? "") });
   }
   return messages;
+}
+
+export function criticTurnToDict(ct: CriticTurn): DialogueTurn {
+  if (ct.status === "unavailable") {
+    return {
+      round: ct.round,
+      speaker: "critic",
+      status: "unavailable",
+      error: ct.error,
+      raw_text: ct.rawText,
+      turns_under_review: ct.turnsUnderReview,
+    };
+  }
+  const ok = ct as CriticTurnOk;
+  return {
+    round: ok.round,
+    speaker: "critic",
+    status: "ok",
+    turns_under_review: ok.turnsUnderReview,
+    factual_assertions: ok.factualAssertions,
+    assumptions: ok.assumptions,
+    steelman: ok.steelman,
+    anti_steelman: ok.antiSteelman,
+    argdown: ok.argdown,
+    dung_extension: {
+      in: ok.dungExtension.in_,
+      out: ok.dungExtension.out,
+      undec: ok.dungExtension.undec,
+    },
+  };
 }

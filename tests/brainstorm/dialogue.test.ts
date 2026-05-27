@@ -1,5 +1,9 @@
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
 import { run, type TurnGenerator } from "../../src/brainstorm/dialogue.ts";
+import {
+  type ArgdownClient,
+  LightweightArgdownClient,
+} from "../../src/brainstorm/argdown_client.ts";
 
 interface Call {
   system: string;
@@ -143,4 +147,133 @@ Deno.test("run without critic produces v0.1.x shape", async () => {
   assertEquals(t.model, "MiniMax-M2.7-highspeed");
   assertEquals(t.turns.length, 2);
   assert(typeof t.synthesisHint === "string");
+});
+
+const VALID_CRITIC = JSON.stringify({
+  turns_under_review: ["claude_r1", "pragmatist_r1"],
+  factual_assertions: [],
+  assumptions: [
+    { speaker: "claude", premise: "users want X", argued_for: false },
+  ],
+  steelman: { claude: "strong c", pragmatist: "strong p" },
+  anti_steelman: { claude: "weak c", pragmatist: "weak p" },
+  argdown: "[A]: foo",
+});
+
+Deno.test("run: criticGenerator without argdownClient raises", async () => {
+  const { generator } = recordingGenerator(["p1"]);
+  const { generator: criticGen } = recordingGenerator([VALID_CRITIC]);
+  await assertRejects(
+    () =>
+      run({
+        prompt: "p",
+        claudeThoughts: "s",
+        maxRounds: 1,
+        generator,
+        criticGenerator: criticGen,
+      }),
+    Error,
+    "argdown",
+  );
+});
+
+Deno.test("run: argdownClient without criticGenerator raises", async () => {
+  const { generator } = recordingGenerator(["p1"]);
+  await assertRejects(
+    () =>
+      run({
+        prompt: "p",
+        claudeThoughts: "s",
+        maxRounds: 1,
+        generator,
+        argdownClient: new LightweightArgdownClient(),
+      }),
+    Error,
+    "critic_generator",
+  );
+});
+
+Deno.test("run: critic mode produces 3N turns in correct order", async () => {
+  const { generator } = recordingGenerator(["p1", "c2", "p2", "c3", "p3"]);
+  const { generator: criticGen } = recordingGenerator([
+    VALID_CRITIC,
+    VALID_CRITIC,
+    VALID_CRITIC,
+  ]);
+  const t = await run({
+    prompt: "p",
+    claudeThoughts: "seed",
+    maxRounds: 3,
+    generator,
+    criticGenerator: criticGen,
+    argdownClient: new LightweightArgdownClient(),
+  });
+  // Each round: claude, pragmatist, critic
+  assertEquals(t.turns.length, 9);
+  const speakers = t.turns.map((x) => x.speaker);
+  assertEquals(speakers, [
+    "claude", "pragmatist", "critic",
+    "claude", "pragmatist", "critic",
+    "claude", "pragmatist", "critic",
+  ]);
+});
+
+Deno.test("run: round 1 critic reviews seed + pragmatist", async () => {
+  const { generator } = recordingGenerator(["p1"]);
+  const { generator: criticGen, calls: criticCalls } = recordingGenerator([
+    VALID_CRITIC,
+  ]);
+  await run({
+    prompt: "p",
+    claudeThoughts: "MY_SEED",
+    maxRounds: 1,
+    generator,
+    criticGenerator: criticGen,
+    argdownClient: new LightweightArgdownClient(),
+  });
+  assertEquals(criticCalls.length, 1);
+  assert(criticCalls[0]?.messages[0]?.content.includes("MY_SEED"));
+  assert(criticCalls[0]?.messages[0]?.content.includes("p1"));
+});
+
+Deno.test("run: round 2 speakers see round 1 critic addendum", async () => {
+  const { generator, calls } = recordingGenerator(["p1", "c2", "p2"]);
+  const { generator: criticGen } = recordingGenerator([VALID_CRITIC, VALID_CRITIC]);
+  await run({
+    prompt: "p",
+    claudeThoughts: "s",
+    maxRounds: 2,
+    generator,
+    criticGenerator: criticGen,
+    argdownClient: new LightweightArgdownClient(),
+  });
+  // calls: [pragmatist r1, claude r2, pragmatist r2]
+  const claudeR2 = calls[1]!;
+  const pragmatistR2 = calls[2]!;
+  assert(claudeR2.system.includes("Critic feedback from round 1"));
+  assert(claudeR2.system.includes("weak c")); // claude's anti_steelman
+  assert(claudeR2.system.includes("strong p")); // opposing steelman
+  assert(pragmatistR2.system.includes("weak p"));
+  assert(pragmatistR2.system.includes("strong c"));
+});
+
+Deno.test("run: sentinel critic does not augment next round", async () => {
+  const { generator, calls } = recordingGenerator(["p1", "c2", "p2"]);
+  const { generator: criticGen } = recordingGenerator([
+    "nope1",
+    "nope2", // both invalid → sentinel
+    VALID_CRITIC,
+    VALID_CRITIC,
+  ]);
+  await run({
+    prompt: "p",
+    claudeThoughts: "s",
+    maxRounds: 2,
+    generator,
+    criticGenerator: criticGen,
+    argdownClient: new LightweightArgdownClient(),
+  });
+  const claudeR2 = calls[1]!;
+  // Sentinel addendum is empty, so no "Critic feedback" in claude r2's system.
+  assert(!claudeR2.system.includes("Critic feedback from round 1"));
 });
