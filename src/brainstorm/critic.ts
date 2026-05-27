@@ -218,6 +218,39 @@ export function buildCriticMessages(
   return messages;
 }
 
+export function renderAddendum(
+  criticTurn: CriticTurn,
+  targetSpeaker: Speaker,
+): string {
+  if (criticTurn.status === "unavailable") return "";
+
+  const opposing: Speaker = targetSpeaker === "claude" ? "pragmatist" : "claude";
+  const parts: string[] = [
+    `Critic feedback from round ${criticTurn.round}:`,
+    "",
+  ];
+
+  const targetAnti = criticTurn.antiSteelman[targetSpeaker];
+  parts.push("Your weakest claim (the version to defend or retract):");
+  parts.push(`  "${targetAnti}"`);
+  parts.push("");
+
+  const ownUndefended = criticTurn.assumptions
+    .filter((a) => a.speaker === targetSpeaker && !a.argued_for)
+    .map((a) => a.premise);
+  if (ownUndefended.length > 0) {
+    parts.push("Undefended assumptions you relied on:");
+    for (const p of ownUndefended) parts.push(`  - "${p}"`);
+    parts.push("");
+  }
+
+  const opposingSteel = criticTurn.steelman[opposing];
+  parts.push("The opposing steelman to engage with:");
+  parts.push(`  "${opposingSteel}"`);
+
+  return parts.join("\n");
+}
+
 export function validateCriticJson(text: string): CriticValidationResult {
   let data: unknown;
   try {

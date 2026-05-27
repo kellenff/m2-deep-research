@@ -2,7 +2,10 @@ import { assert, assertEquals } from "jsr:@std/assert";
 import {
   buildCriticMessages,
   CRITIC_SYSTEM_PROMPT,
+  type CriticTurnOk,
+  type CriticTurnUnavailable,
   DialogueTurn,
+  renderAddendum,
   validateCriticJson,
 } from "../../src/brainstorm/critic.ts";
 
@@ -111,4 +114,63 @@ Deno.test("buildCriticMessages: lastError prepends a feedback message", () => {
   assert(msgs[0]?.content.includes("Previous output failed validation"));
   assert(msgs[0]?.content.includes("invalid JSON: oops"));
   assertEquals(msgs[1]?.role, "user");
+});
+
+const okTurn: CriticTurnOk = {
+  round: 1,
+  speaker: "critic",
+  status: "ok",
+  turnsUnderReview: ["claude_r1", "pragmatist_r1"],
+  factualAssertions: [],
+  assumptions: [
+    { speaker: "claude", premise: "users want X", argued_for: false },
+    { speaker: "claude", premise: "Y is fast", argued_for: true },
+    { speaker: "pragmatist", premise: "Z is slow", argued_for: false },
+  ],
+  steelman: { claude: "strong c", pragmatist: "strong p" },
+  antiSteelman: { claude: "weak c", pragmatist: "weak p" },
+  argdown: "",
+  dungExtension: { in_: [], out: [], undec: [] },
+};
+
+Deno.test("renderAddendum: claude sees own anti-steelman + own undefended + opposing steelman", () => {
+  const a = renderAddendum(okTurn, "claude");
+  assert(a.includes("weak c"));
+  assert(a.includes("users want X")); // claude's undefended
+  assert(!a.includes("Y is fast")); // claude's argued_for=true is excluded
+  assert(!a.includes("Z is slow")); // pragmatist's premise is excluded
+  assert(a.includes("strong p")); // opposing steelman
+  assert(!a.includes("strong c")); // own steelman is excluded
+});
+
+Deno.test("renderAddendum: pragmatist sees mirror image", () => {
+  const a = renderAddendum(okTurn, "pragmatist");
+  assert(a.includes("weak p"));
+  assert(a.includes("Z is slow"));
+  assert(!a.includes("users want X"));
+  assert(a.includes("strong c"));
+  assert(!a.includes("strong p"));
+});
+
+Deno.test("renderAddendum: unavailable critic turn returns empty string", () => {
+  const u: CriticTurnUnavailable = {
+    round: 1,
+    speaker: "critic",
+    status: "unavailable",
+    turnsUnderReview: [],
+    error: "test",
+    rawText: null,
+  };
+  assertEquals(renderAddendum(u, "claude"), "");
+});
+
+Deno.test("renderAddendum: omits undefended-assumptions block when speaker has none", () => {
+  const turn: CriticTurnOk = {
+    ...okTurn,
+    assumptions: [
+      { speaker: "pragmatist", premise: "p has one", argued_for: false },
+    ],
+  };
+  const a = renderAddendum(turn, "claude");
+  assert(!a.includes("Undefended assumptions"));
 });
