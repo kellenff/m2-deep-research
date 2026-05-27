@@ -1,5 +1,8 @@
 import { assert, assertEquals } from "@std/assert";
-import { LightweightArgdownClient } from "../../src/brainstorm/argdown_client.ts";
+import {
+  DenoArgdownClient,
+  LightweightArgdownClient,
+} from "../../src/brainstorm/argdown_client.ts";
 
 Deno.test("parse rejects source with no labeled arguments", () => {
   const c = new LightweightArgdownClient();
@@ -42,4 +45,40 @@ Deno.test("dungExtensions returns empty extension for empty source", () => {
   assertEquals(r.in_, []);
   assertEquals(r.out, []);
   assertEquals(r.undec, []);
+});
+
+function makeFakeRunner(
+  outputs: { code: number; stdout: string; stderr: string }[],
+) {
+  let i = 0;
+  return (_args: string[], stdin: string) => {
+    const out = outputs[i++];
+    if (!out) throw new Error("fake runner: no more outputs");
+    return Promise.resolve({
+      code: out.code,
+      stdout: new TextEncoder().encode(out.stdout),
+      stderr: new TextEncoder().encode(out.stderr),
+      stdinEcho: stdin,
+    });
+  };
+}
+
+Deno.test("DenoArgdownClient.parse returns ok on subprocess exit 0", async () => {
+  const c = new DenoArgdownClient({
+    runner: makeFakeRunner([{ code: 0, stdout: "", stderr: "" }]),
+  });
+  const r = await c.parse("[A]: x");
+  assertEquals(r.ok, true);
+  assertEquals(r.error, null);
+});
+
+Deno.test("DenoArgdownClient.parse returns !ok with stderr on exit nonzero", async () => {
+  const c = new DenoArgdownClient({
+    runner: makeFakeRunner([
+      { code: 1, stdout: "", stderr: "parse error: line 1" },
+    ]),
+  });
+  const r = await c.parse("not argdown");
+  assertEquals(r.ok, false);
+  assert(r.error?.includes("parse error"));
 });
