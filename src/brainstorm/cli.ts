@@ -78,6 +78,7 @@ import { dirname } from "jsr:@std/path@^1.0";
 import {
   type DialogueTurn,
   run,
+  transcriptToJson,
   type TurnGenerator,
 } from "./dialogue.ts";
 import {
@@ -180,7 +181,7 @@ export async function main(
   }
 
   await Deno.mkdir(dirname(args.output), { recursive: true });
-  await Deno.writeTextFile(args.output, JSON.stringify(transcript, null, 2));
+  await Deno.writeTextFile(args.output, JSON.stringify(transcriptToJson(transcript), null, 2));
   console.log(args.output);
   return 0;
 }

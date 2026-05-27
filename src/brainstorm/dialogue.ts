@@ -137,6 +137,21 @@ export function messagesForClaudeSynth(turns: DialogueTurn[]): ApiMessage[] {
   return messages;
 }
 
+export function transcriptToJson(t: Transcript): unknown {
+  const obj: Record<string, unknown> = {
+    prompt: t.prompt,
+    claude_seed_thoughts: t.claudeSeedThoughts,
+    max_rounds: t.maxRounds,
+    model: t.model,
+    turns: t.turns,
+    synthesis_hint: t.synthesisHint,
+  };
+  if (t.critiqueAggregate !== undefined) {
+    obj.critique_aggregate = t.critiqueAggregate;
+  }
+  return obj;
+}
+
 export function criticTurnToDict(ct: CriticTurn): DialogueTurn {
   if (ct.status === "unavailable") {
     return {

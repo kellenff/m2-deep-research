@@ -117,10 +117,10 @@ Deno.test("main: writes transcript JSON to --output", async () => {
     );
     assertEquals(exit, 0);
     const transcript = JSON.parse(await Deno.readTextFile(out));
-    assertEquals(transcript.maxRounds, 1);
+    assertEquals(transcript.max_rounds, 1);
     assertEquals(transcript.turns.length, 2);
     assertEquals(transcript.turns[1]?.text, "pragmatist text");
-    assert(transcript.critiqueAggregate === undefined);
+    assert(transcript.critique_aggregate === undefined);
   });
 });
 
@@ -149,8 +149,8 @@ Deno.test("main: --critique adds critique_aggregate with rounds_critiqued", asyn
     assertEquals(exit, 0);
     const t = JSON.parse(await Deno.readTextFile(out));
     assertEquals(t.turns.length, 3);
-    assertEquals(t.critiqueAggregate.rounds_critiqued, 1);
-    assertEquals(t.critiqueAggregate.rounds_with_critic_unavailable, 0);
+    assertEquals(t.critique_aggregate.rounds_critiqued, 1);
+    assertEquals(t.critique_aggregate.rounds_with_critic_unavailable, 0);
   });
 });
 
@@ -170,8 +170,8 @@ Deno.test("main: --critique with broken critic produces unavailable rounds", asy
     );
     assertEquals(exit, 0);
     const t = JSON.parse(await Deno.readTextFile(out));
-    assertEquals(t.critiqueAggregate.rounds_critiqued, 1);
-    assertEquals(t.critiqueAggregate.rounds_with_critic_unavailable, 1);
+    assertEquals(t.critique_aggregate.rounds_critiqued, 1);
+    assertEquals(t.critique_aggregate.rounds_with_critic_unavailable, 1);
   });
 });
 
