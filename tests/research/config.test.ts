@@ -6,7 +6,7 @@ Deno.test("makeConfig throws when both keys missing", () => {
   assertThrows(
     () => cfg.validate(),
     Error,
-    "MINIMAX_API_KEY",
+    "MINIMAX_API_KEY, EXA_API_KEY",
   );
 });
 
