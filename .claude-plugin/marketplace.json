@@ -1,14 +1,14 @@
 {
   "name": "m2-deep-research",
-  "description": "Plugins built on top of the m2-deep-research package (MiniMax-M2.7-highspeed)",
+  "description": "TypeScript-native brainstorming dialogue + deep-research CLIs (MiniMax-M2.7-highspeed)",
   "owner": {
     "name": "Kellen Frodelius-Fujimoto"
   },
   "plugins": [
     {
       "name": "m2-brainstorm",
-      "description": "Multi-turn brainstorming dialogue with optional argdown-backed critic voice",
-      "version": "0.2.0",
+      "description": "Multi-turn brainstorming dialogue with argdown-backed critic voice (TypeScript port)",
+      "version": "0.3.0",
       "source": "./.claude/plugins/m2-brainstorm",
       "author": {
         "name": "Kellen Frodelius-Fujimoto"

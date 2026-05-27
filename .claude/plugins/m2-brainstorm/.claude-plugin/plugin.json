@@ -1,7 +1,7 @@
 {
   "name": "m2-brainstorm",
-  "version": "0.2.0",
-  "description": "Multi-turn brainstorming dialogue powered by MiniMax-M2.7-highspeed, with optional argdown-backed critic voice",
+  "version": "0.3.0",
+  "description": "Multi-turn brainstorming dialogue with argdown-backed critic voice — TypeScript-native, pre-compiled binaries for Linux/macOS/Windows with deno-run fallback",
   "author": {
     "name": "Kellen Frodelius-Fujimoto"
   }
