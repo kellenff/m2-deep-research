@@ -173,6 +173,51 @@ function asSteelmanPair(x: unknown): SteelmanPair {
   return { claude: o.claude, pragmatist: o.pragmatist };
 }
 
+export interface ApiMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface DialogueTurn {
+  round: number;
+  speaker: "claude" | "pragmatist" | "critic";
+  text?: string;
+  [key: string]: unknown;
+}
+
+export interface BuildCriticMessagesOpts {
+  currentRound: number;
+  lastError?: string;
+}
+
+export function buildCriticMessages(
+  turns: DialogueTurn[],
+  opts: BuildCriticMessagesOpts,
+): ApiMessage[] {
+  const roundTurns = turns.filter(
+    (t) =>
+      t.round === opts.currentRound &&
+      (t.speaker === "claude" || t.speaker === "pragmatist"),
+  );
+  const summary = roundTurns
+    .map((t) => `${t.speaker} (round ${t.round}): ${t.text ?? ""}`)
+    .join("\n\n");
+  const userText = `${summary}\n\nProduce your critique JSON for the turns above.`;
+  const messages: ApiMessage[] = [{ role: "user", content: userText }];
+
+  if (opts.lastError) {
+    messages.unshift({
+      role: "user",
+      content:
+        `Previous output failed validation: ${opts.lastError}. ` +
+        `Re-emit the JSON object matching the schema exactly. ` +
+        `No prose, no fences.`,
+    });
+  }
+
+  return messages;
+}
+
 export function validateCriticJson(text: string): CriticValidationResult {
   let data: unknown;
   try {
