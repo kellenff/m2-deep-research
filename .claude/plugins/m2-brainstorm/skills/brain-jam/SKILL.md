@@ -36,10 +36,10 @@ Compose 2–4 sentences of your own initial analysis. Make a substantive claim a
 
 ### 3. Run the CLI
 
-The user's working directory must contain the m2-deep-research package (this plugin lives inside it). Invoke via Bash:
+Invoke the installed `m2-brainstorm` binary via Bash. It runs from any directory — the output path is relative to the current working directory.
 
 ```bash
-uv run python brainstorm.py \
+"$HOME/.config/m2-brainstorm/bin/m2-brainstorm" \
   --prompt "<one-sentence problem statement>" \
   --claude-thoughts "<your 2-4 sentence seed>" \
   --max-rounds 3 \
@@ -59,7 +59,7 @@ Present the user with distinct angles that emerged from the dialogue. For each a
 **Quality test:** The synthesis must contain ideas neither role had alone. If your synthesis is just "Option 1 + Option 2 mashed together," the jam was shallow — run another round:
 
 ```bash
-uv run python brainstorm.py \
+"$HOME/.config/m2-brainstorm/bin/m2-brainstorm" \
   --prompt "<refined statement>" \
   --claude-thoughts "<original seed + key insight from first jam>" \
   --max-rounds 2 \

@@ -41,7 +41,7 @@ Compose `--claude-thoughts` as: tech-stack summary + killer feature + pain point
 ### 4. Run the CLI
 
 ```bash
-uv run python brainstorm.py \
+"$HOME/.config/m2-brainstorm/bin/m2-brainstorm" \
   --prompt "What's the right angle for this README — tone, hook, and positioning?" \
   --claude-thoughts "<seed from step 3>" \
   --max-rounds 3 \
